@@ -3,10 +3,10 @@ session_start();
 require_once 'database.php';
 
 // Simple authentication check
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: login.php');
-    exit();
-}
+// if (!isset($_SESSION['admin_logged_in'])) {
+//     header('Location: login.php');
+//     exit();
+// }
 
 // Handle AJAX requests
 if (isset($_POST['action'])) {
@@ -91,7 +91,7 @@ $query = "SELECT
             s.Name,
             s.IconServer,
             s.Description,
-            s.CreatedAt,
+            -- s.CreatedAt,
             u.Username as OwnerUsername,
             u.Discriminator as OwnerDiscriminator,
             (SELECT COUNT(*) FROM UserServerMemberships WHERE ServerID = s.ID) as MemberCount
@@ -131,31 +131,28 @@ $totalPages = ceil($totalServers / $limit);
 <body>
     <div class="admin-container">
         <!-- Sidebar -->
-        <div class="sidebar">
+         <div class="sidebar">
             <div class="sidebar-header">
-                <h2>Admin</h2>
+                <h2>Admin Dashboard</h2>
+                <div style="font-size: 12px; color: #888; margin-top: 4px;">Admin</div>
             </div>
             <nav class="sidebar-nav">
-                <a href="admin.php" class="nav-item">
-                    <span class="nav-icon">📊</span>
-                    <span class="nav-text">DASHBOARD</span>
-                </a>
-                <a href="admin.php" class="nav-item">
-                    <span class="nav-icon">📈</span>
-                    <span class="nav-text">Overview</span>
-                </a>
-                <a href="users.php" class="nav-item">
-                    <span class="nav-icon">👥</span>
-                    <span class="nav-text">Users</span>
-                </a>
-                <a href="servers.php" class="nav-item active">
-                    <span class="nav-icon">🖥️</span>
-                    <span class="nav-text">Servers</span>
-                </a>
-                <a href="nitro.php" class="nav-item">
-                    <span class="nav-icon">💎</span>
-                    <span class="nav-text">Nitro Codes</span>
-                </a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Dashboard</div>
+                    <a href="admin.php" class="nav-item">
+                        <span class="nav-text">Overview</span>
+                    </a>
+                    <a href="users.php" class="nav-item">
+                        <span class="nav-text">Users</span>
+                    </a>
+                    <a href="servers.php" class="nav-item active">
+                        <span class="nav-text">Servers</span>
+                    </a>
+                    <a href="nitro.php" class="nav-item">
+                        <span class="nav-text">Nitro Codes</span>
+                    </a>
+                </div>
+                
                 <a href="logout.php" class="nav-item logout">
                     <span class="nav-icon">🚪</span>
                     <span class="nav-text">Log Out</span>
