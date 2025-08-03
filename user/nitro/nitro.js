@@ -77,7 +77,7 @@ function redeemCode() {
     btn.prop('disabled', true).html('<span class="btn-icon">⏳</span>Redeeming...');
     
     $.ajax({
-        url: 'user-nitro.php',
+        url: 'nitro.php',
         method: 'POST',
         data: {
             action: 'redeem_code',

@@ -74,7 +74,7 @@ if (isset($_POST['action'])) {
         if ($updateStmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Nitro code redeemed successfully!']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to redeem code. Please try again.']);
+            echo json_encode(['success' => false, 'message' => 'EEFailed to redeem code. Please try again2.']);
         }
         exit();
     }
