@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['user_id'] = $user['ID'];
                     $_SESSION['username'] = $user['Username'];
                     $_SESSION['email'] = $user['Email'];
-                    header('Location: ../main/dashboard.php');
+                    header('Location: ../user/nitro/nitro.php');
                     exit();
                 } else {
                     $error = 'Invalid email or password.';
