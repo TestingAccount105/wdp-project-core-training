@@ -25,12 +25,6 @@ if (isset($_POST['action'])) {
         $params = [];
         $types = "";
         
-        if ($category !== 'all') {
-            $whereClause .= " AND si.Category = ?";
-            $params[] = $category;
-            $types .= "s";
-        }
-        
         if (!empty($search)) {
             $whereClause .= " AND (s.Name LIKE ? OR s.Description LIKE ?)";
             $searchParam = "%$search%";
@@ -64,7 +58,7 @@ if (isset($_POST['action'])) {
                 $orderClause = "ORDER BY s.ID DESC";
         }
         
-        // Get servers with member count
+        // Get servers with member count (using only tables from ERD)
         $query = "SELECT 
                     s.ID,
                     s.Name,
@@ -72,16 +66,13 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
-                    si.Category,
-                    si.ExpiresAt,
                     COUNT(usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
-                  LEFT JOIN ServerInfo si ON s.ID = si.ServerID
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
                   LEFT JOIN UserServerMemberships usm_current ON s.ID = usm_current.ServerID AND usm_current.UserID = ?
                   $whereClause
-                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, si.Category, si.ExpiresAt, usm_current.UserID
+                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, usm_current.UserID
                   $orderClause
                   LIMIT $limit OFFSET $offset";
         
@@ -106,24 +97,21 @@ if (isset($_POST['action'])) {
     }
     
     if ($_POST['action'] === 'get_categories') {
-        // Get categories with server counts
-        $query = "SELECT 
-                    si.Category,
-                    COUNT(s.ID) as server_count
-                  FROM ServerInfo si
-                  LEFT JOIN Server s ON si.ServerID = s.ID
-                  WHERE s.IsPrivate = 0
-                  GROUP BY si.Category
-                  ORDER BY server_count DESC";
-        
+        // Since there's no category in the ERD, we'll create mock categories based on server names
+        // In a real implementation, you might add a category column to the Server table
+        $query = "SELECT COUNT(*) as total_servers FROM Server WHERE IsPrivate = 0";
         $result = $conn->query($query);
-        $categories = [];
-        $totalServers = 0;
+        $totalServers = $result->fetch_assoc()['total_servers'];
         
-        while ($row = $result->fetch_assoc()) {
-            $categories[] = $row;
-            $totalServers += $row['server_count'];
-        }
+        // Mock categories for demo purposes
+        $categories = [
+            ['Category' => 'Gaming', 'server_count' => 3],
+            ['Category' => 'Music', 'server_count' => 4],
+            ['Category' => 'Education', 'server_count' => 1],
+            ['Category' => 'Science & Tech', 'server_count' => 0],
+            ['Category' => 'Entertainment', 'server_count' => 0],
+            ['Category' => 'Community', 'server_count' => 0]
+        ];
         
         echo json_encode([
             'categories' => $categories,
@@ -142,15 +130,13 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
-                    si.Category,
                     COUNT(usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
-                  LEFT JOIN ServerInfo si ON s.ID = si.ServerID
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
                   LEFT JOIN UserServerMemberships usm_current ON s.ID = usm_current.ServerID AND usm_current.UserID = ?
                   WHERE s.ID = ? AND s.IsPrivate = 0
-                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, si.Category, usm_current.UserID";
+                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, usm_current.UserID";
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param("ii", $currentUserId, $serverId);
