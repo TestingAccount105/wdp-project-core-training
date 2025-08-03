@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config/database.php';
+require_once 'database.php';
 
 // Get current user ID (assuming user is logged in)
 $currentUserId = $_SESSION['user_id'] ?? 1; // Default to user 1 for demo
@@ -247,7 +247,7 @@ if (isset($_POST['action'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore Servers - Discord</title>
-    <link rel="stylesheet" href="assets/css/user-explore.css">
+    <link rel="stylesheet" href="user-explore.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -441,6 +441,6 @@ if (isset($_POST['action'])) {
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="assets/js/user-explore.js"></script>
+    <script src="user-explore.js"></script>
 </body>
 </html>
