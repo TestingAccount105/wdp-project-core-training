@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config/database.php';
+require_once 'database.php';
 
 // Check if user is logged in (assuming you have user sessions)
 $userId = $_SESSION['user_id'] ?? null;
@@ -87,7 +87,7 @@ if (isset($_POST['action'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get more with Nitro - MisVord</title>
-    <link rel="stylesheet" href="assets/css/nitro-user.css">
+    <link rel="stylesheet" href="nitro.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -319,6 +319,6 @@ if (isset($_POST['action'])) {
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="assets/js/nitro-user.js"></script>
+    <script src="nitro.js"></script>
 </body>
 </html>
