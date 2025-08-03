@@ -224,6 +224,7 @@ $captcha = generateCaptcha();
                         <small style="color: rgba(255, 255, 255, 0.6); font-size: 12px;">Used for account recovery if you forget your password</small>
                     </div>
                     <div class="captcha-section">
+                        <!-- T -->
                         <div class="form-group">
                             <label class="form-label">Verification</label>
                             <div class="captcha-container">
