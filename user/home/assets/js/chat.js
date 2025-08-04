@@ -631,16 +631,37 @@ class ChatManager {
                 })
             });
 
-            const data = await response.json();
+            const responseText = await response.text();
+            console.log('Raw toggle reaction response:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.error('Response text:', responseText);
+                this.showErrorNotification('Server returned invalid response. Please check console for details.');
+                return;
+            }
 
             if (data.success) {
-                // Update reaction via socket
+                // Update reactions immediately in the UI
+                if (data.reactions) {
+                    this.updateMessageReactions(messageId, data.reactions);
+                } else {
+                    // Fallback: reload just the reactions for this message
+                    await this.refreshMessageReactions(messageId);
+                }
+                
+                // Update reaction via socket for other users
                 window.socketClient?.reactToMessage(messageId, emoji);
             } else {
                 console.error('Failed to react to message:', data.error);
+                this.showErrorNotification('Failed to add reaction: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error reacting to message:', error);
+            this.showErrorNotification('Network error while adding reaction');
         }
     }
 
@@ -841,16 +862,49 @@ class ChatManager {
                 })
             });
 
-            const data = await response.json();
+            const responseText = await response.text();
+            console.log('Raw reaction response:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.error('Response text:', responseText);
+                this.showErrorNotification('Server returned invalid response. Please check console for details.');
+                return;
+            }
             
             if (data.success) {
-                // Reload messages to show updated reactions
-                this.loadMessages(this.currentRoomId);
+                // Update reactions immediately in the UI
+                if (data.reactions) {
+                    this.updateMessageReactions(messageId, data.reactions);
+                } else {
+                    // Fallback: reload just the reactions for this message
+                    await this.refreshMessageReactions(messageId);
+                }
+                
+                this.showSuccessNotification('Reaction added!');
             } else {
                 console.error('Failed to react to message:', data.error);
+                this.showErrorNotification('Failed to add reaction: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error reacting to message:', error);
+            this.showErrorNotification('Network error while adding reaction');
+        }
+    }
+
+    async refreshMessageReactions(messageId) {
+        try {
+            const response = await fetch(`/user/home/api/chat.php?action=get_message_reactions&message_id=${messageId}`);
+            const data = await response.json();
+            
+            if (data.success && data.reactions) {
+                this.updateMessageReactions(messageId, data.reactions);
+            }
+        } catch (error) {
+            console.error('Error refreshing message reactions:', error);
         }
     }
 
@@ -1332,3 +1386,4 @@ class ChatManager {
 
 // Initialize chat manager
 window.chatManager = new ChatManager();
+// Fixed syntax error - reload complete

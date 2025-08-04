@@ -17,6 +17,14 @@ switch ($method) {
                 case 'active_users':
                     get_active_users($user_id);
                     break;
+                case 'get_message_reactions':
+                    if (isset($_GET['message_id'])) {
+                        $reactions = get_message_reactions($_GET['message_id']);
+                        send_response(['success' => true, 'reactions' => $reactions]);
+                    } else {
+                        send_response(['error' => 'Message ID required'], 400);
+                    }
+                    break;
                 default:
                     send_response(['error' => 'Invalid action'], 400);
             }
@@ -526,7 +534,7 @@ function react_to_message($user_id, $message_id, $emoji) {
     }
     
     // Check if user already reacted with this emoji
-    $existing_query = "SELECT ID FROM MessageReaction WHERE MessageID = ? AND UserID = ? AND Emoji = ?";
+    $existing_query = "SELECT ID FROM MessageReaction WHERE MessageID = ? AND UserID = ? AND Emoji COLLATE utf8mb4_general_ci = ?";
     $stmt = $mysqli->prepare($existing_query);
     $stmt->bind_param("iis", $message_id, $user_id, $emoji);
     $stmt->execute();
@@ -538,15 +546,57 @@ function react_to_message($user_id, $message_id, $emoji) {
         $stmt = $mysqli->prepare($delete_query);
         $stmt->bind_param("i", $existing['ID']);
         $stmt->execute();
-        send_response(['success' => 'Reaction removed', 'action' => 'removed']);
+        $action = 'removed';
     } else {
         // Add reaction
         $insert_query = "INSERT INTO MessageReaction (MessageID, UserID, Emoji) VALUES (?, ?, ?)";
         $stmt = $mysqli->prepare($insert_query);
         $stmt->bind_param("iis", $message_id, $user_id, $emoji);
         $stmt->execute();
-        send_response(['success' => 'Reaction added', 'action' => 'added']);
+        $action = 'added';
     }
+    
+    // Get updated reactions for this message
+    $reactions = get_message_reactions($message_id);
+    
+    send_response([
+        'success' => 'Reaction ' . $action, 
+        'action' => $action,
+        'reactions' => $reactions
+    ]);
 }
 
-?>}
+function get_message_reactions($message_id) {
+    global $mysqli;
+    
+    // Get current user ID from session
+    $current_user_id = $_SESSION['user_id'] ?? 0;
+    
+    $query = "SELECT mr.Emoji, COUNT(*) as count, 
+                     GROUP_CONCAT(u.DisplayName) as users,
+                     MAX(CASE WHEN mr.UserID = ? THEN 1 ELSE 0 END) as user_reacted
+              FROM MessageReaction mr 
+              JOIN User u ON mr.UserID = u.ID 
+              WHERE mr.MessageID = ? 
+              GROUP BY mr.Emoji 
+              ORDER BY MIN(mr.CreatedAt)";
+    
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param("ii", $current_user_id, $message_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $reactions = [];
+    while ($row = $result->fetch_assoc()) {
+        $reactions[] = [
+            'emoji' => $row['Emoji'],
+            'count' => (int)$row['count'],
+            'users' => explode(',', $row['users']),
+            'user_reacted' => (bool)$row['user_reacted']
+        ];
+    }
+    
+    return $reactions;
+}
+
+?>
