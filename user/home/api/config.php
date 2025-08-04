@@ -46,13 +46,19 @@ function send_response($data, $status_code = 200) {
 // Function to validate user session
 function validate_session() {
     try {
-        if (session_status() === PHP_SESSION_NONE) {
+        // Only start session if not already started and headers not sent
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
-        if (!isset($_SESSION['user_id'])) {
-            send_response(['error' => 'Unauthorized'], 401);
+        
+        // Check if session is active and has user_id
+        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['user_id'])) {
+            return $_SESSION['user_id'];
         }
-        return $_SESSION['user_id'];
+        
+        // If no valid session, send unauthorized response
+        send_response(['error' => 'Unauthorized - Please log in'], 401);
+        
     } catch (Exception $e) {
         error_log("Session validation error: " . $e->getMessage());
         send_response(['error' => 'Session error: ' . $e->getMessage()], 500);

@@ -3,10 +3,17 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
+// Start session first, before any output
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once 'config.php';
 
 // Set content type to JSON from the start
-header('Content-Type: application/json');
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+}
 
 // Global error handler to ensure all errors are returned as JSON
 set_error_handler(function($severity, $message, $file, $line) {
@@ -151,7 +158,7 @@ function get_conversations($user_id) {
             throw new Exception("Prepare failed: " . $mysqli->error);
         }
         
-        if (!$stmt->bind_param("iiiiii", $user_id, $user_id, $user_id, $user_id, $user_id, $user_id)) {
+        if (!$stmt->bind_param("iiiii", $user_id, $user_id, $user_id, $user_id, $user_id)) {
             throw new Exception("Bind param failed: " . $stmt->error);
         }
         
@@ -276,11 +283,14 @@ function get_messages($user_id, $room_id) {
         
         $reactions = [];
         while ($reaction = $reactions_result->fetch_assoc()) {
-            $user_ids = explode(',', $reaction['user_ids']);
+            // Handle null values from GROUP_CONCAT
+            $user_ids = $reaction['user_ids'] ? explode(',', $reaction['user_ids']) : [];
+            $users = $reaction['users'] ? explode(',', $reaction['users']) : [];
+            
             $reactions[] = [
                 'emoji' => $reaction['Emoji'],
                 'count' => (int)$reaction['count'],
-                'users' => explode(',', $reaction['users']),
+                'users' => $users,
                 'user_reacted' => in_array($user_id, $user_ids)
             ];
         }
@@ -662,10 +672,13 @@ function get_message_reactions($message_id) {
     
     $reactions = [];
     while ($row = $result->fetch_assoc()) {
+        // Handle null values from GROUP_CONCAT
+        $users = $row['users'] ? explode(',', $row['users']) : [];
+        
         $reactions[] = [
             'emoji' => $row['Emoji'],
             'count' => (int)$row['count'],
-            'users' => explode(',', $row['users']),
+            'users' => $users,
             'user_reacted' => (bool)$row['user_reacted']
         ];
     }
