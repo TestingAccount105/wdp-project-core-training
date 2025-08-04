@@ -80,14 +80,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $register_data = $_SESSION['register_data'];
             
-            $id = time() . rand(1000, 9999);
+            // Generate a unique integer ID that fits within INTEGER(10) range
+            // INTEGER(10) can hold values up to 2,147,483,647
+            do {
+                // Generate a random 9-digit number to ensure it fits in INTEGER(10)
+                $id = rand(100000000, 999999999);
+                $check_query = "SELECT ID FROM Users WHERE ID = ?";
+                $check_stmt = $db->prepare($check_query);
+                $check_stmt->bind_param('i', $id);
+                $check_stmt->execute();
+                $check_result = $check_stmt->get_result();
+            } while ($check_result->num_rows > 0);
+            
             $discriminator = str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
             $hashed_password = password_hash($register_data['password'], PASSWORD_DEFAULT);
             $hashed_security_answer = password_hash($security_answer, PASSWORD_DEFAULT);
             
             $query = "INSERT INTO Users (ID, Username, Email, Password, Status, Discriminator, SecurityQuestion, SecurityAnswer) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)";
             $stmt = $db->prepare($query);
-            $stmt->bind_param('sssssss', $id, $register_data['username'], $register_data['email'], $hashed_password, $discriminator, $security_question, $hashed_security_answer);
+            $stmt->bind_param('issssss', $id, $register_data['username'], $register_data['email'], $hashed_password, $discriminator, $security_question, $hashed_security_answer);
             
             if ($stmt->execute()) {
                 unset($_SESSION['register_data']);
@@ -224,7 +235,7 @@ $captcha = generateCaptcha();
                         <small style="color: rgba(255, 255, 255, 0.6); font-size: 12px;">Used for account recovery if you forget your password</small>
                     </div>
                     <div class="captcha-section">
-                        <!-- T -->
+                        <!-- -->
                         <div class="form-group">
                             <label class="form-label">Verification</label>
                             <div class="captcha-container">
