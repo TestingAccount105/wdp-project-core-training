@@ -305,17 +305,36 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
         // Create chat room
         $insert_room_query = "INSERT INTO ChatRoom (Type, Name, ImageUrl) VALUES (?, ?, NULL)";
         $stmt = $mysqli->prepare($insert_room_query);
+        
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $mysqli->error);
+        }
+        
         $stmt->bind_param("ss", $chat_type, $group_name);
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+        
         $room_id = $mysqli->insert_id;
+        
+        if (!$room_id) {
+            throw new Exception("Failed to get room ID after insert");
+        }
         
         // Add participants
         $insert_participant_query = "INSERT INTO ChatParticipants (ChatRoomID, UserID) VALUES (?, ?)";
         $stmt = $mysqli->prepare($insert_participant_query);
         
+        if (!$stmt) {
+            throw new Exception("Prepare participants failed: " . $mysqli->error);
+        }
+        
         foreach ($all_user_ids as $participant_id) {
             $stmt->bind_param("ii", $room_id, $participant_id);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                throw new Exception("Execute participants failed: " . $stmt->error);
+            }
         }
         
         $mysqli->commit();
@@ -323,7 +342,7 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
         
     } catch (Exception $e) {
         $mysqli->rollback();
-        send_response(['error' => 'Failed to create chat'], 500);
+        send_response(['error' => 'Failed to create chat: ' . $e->getMessage()], 500);
     }
 }
 

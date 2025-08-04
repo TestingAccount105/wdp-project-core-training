@@ -61,8 +61,8 @@ class ChatManager {
             this.cancelReply();
         });
 
-        // Create DM button
-        document.getElementById('createDMBtn')?.addEventListener('click', () => {
+        // Create DM button (sidebar)
+        document.getElementById('openDMModalBtn')?.addEventListener('click', () => {
             this.showCreateDMModal();
         });
 
@@ -85,8 +85,8 @@ class ChatManager {
             this.searchDMUsers(e.target.value);
         });
 
-        // Create DM/Group
-        document.getElementById('createDMBtn')?.addEventListener('click', () => {
+        // Create DM/Group (modal submit button)
+        document.getElementById('createDMSubmitBtn')?.addEventListener('click', () => {
             this.createDirectMessage();
         });
 

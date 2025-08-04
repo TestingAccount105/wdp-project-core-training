@@ -45,7 +45,7 @@
                 <div class="direct-messages">
                     <div class="section-header">
                         <span>DIRECT MESSAGES</span>
-                        <button class="create-dm-btn" id="createDMBtn">
+                        <button class="create-dm-btn" id="openDMModalBtn">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -262,7 +262,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelDM">Cancel</button>
-                <button class="btn-primary" id="createDMBtn">Create Message</button>
+                <button class="btn-primary" id="createDMSubmitBtn">Create Message</button>
             </div>
         </div>
     </div>
