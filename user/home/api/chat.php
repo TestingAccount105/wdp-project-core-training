@@ -349,16 +349,20 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
 function send_message($user_id, $room_id, $content, $reply_to = null) {
     global $mysqli;
     
+    error_log("send_message called with user_id=$user_id, room_id=$room_id, content=$content, reply_to=$reply_to");
+    
     // Verify user is participant in this room
     $access_query = "SELECT 1 FROM ChatParticipants WHERE ChatRoomID = ? AND UserID = ?";
     $stmt = $mysqli->prepare($access_query);
     $stmt->bind_param("ii", $room_id, $user_id);
     $stmt->execute();
     if (!$stmt->get_result()->fetch_assoc()) {
+        error_log("Access denied for user $user_id in room $room_id");
         send_response(['error' => 'Access denied'], 403);
     }
     
     if (empty(trim($content))) {
+        error_log("Empty message content");
         send_response(['error' => 'Message content required'], 400);
     }
     
@@ -372,6 +376,8 @@ function send_message($user_id, $room_id, $content, $reply_to = null) {
         $stmt->bind_param("isi", $user_id, $content, $reply_to);
         $stmt->execute();
         $message_id = $mysqli->insert_id;
+        
+        error_log("Created message with ID: $message_id");
         
         // Link message to chat room
         $insert_room_message_query = "INSERT INTO ChatRoomMessage (RoomID, MessageID) VALUES (?, ?)";
@@ -391,6 +397,8 @@ function send_message($user_id, $room_id, $content, $reply_to = null) {
         $stmt->bind_param("i", $message_id);
         $stmt->execute();
         $message_data = $stmt->get_result()->fetch_assoc();
+        
+        error_log("Message data retrieved: " . json_encode($message_data));
         
         send_response([
             'success' => true,
@@ -412,7 +420,8 @@ function send_message($user_id, $room_id, $content, $reply_to = null) {
         
     } catch (Exception $e) {
         $mysqli->rollback();
-        send_response(['error' => 'Failed to send message'], 500);
+        error_log("send_message error: " . $e->getMessage());
+        send_response(['error' => 'Failed to send message: ' . $e->getMessage()], 500);
     }
 }
 
@@ -521,15 +530,4 @@ function react_to_message($user_id, $message_id, $emoji) {
     }
 }
 
-// Create UserLastSeen table if it doesn't exist
-$create_table_query = "CREATE TABLE IF NOT EXISTS UserLastSeen (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    room_id INT NOT NULL,
-    last_seen DATETIME NOT NULL,
-    UNIQUE KEY unique_user_room (user_id, room_id),
-    FOREIGN KEY (user_id) REFERENCES Users(ID) ON DELETE CASCADE,
-    FOREIGN KEY (room_id) REFERENCES ChatRoom(ID) ON DELETE CASCADE
-)";
-$mysqli->query($create_table_query);
 ?>

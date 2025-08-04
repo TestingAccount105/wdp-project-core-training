@@ -192,7 +192,7 @@ class ChatManager {
         const groupedMessages = this.groupMessages(messages);
         
         container.innerHTML = groupedMessages.map(group => {
-            if (group.type === 'single') {
+            if (group.type === 'group') {
                 return this.renderMessageGroup(group);
             } else {
                 return this.renderSingleMessage(group.message);
@@ -414,6 +414,9 @@ class ChatManager {
         } else {
             // Send new message
             try {
+                console.log('Sending message to room:', this.currentRoomId, 'Content:', content);
+                console.log('Message data:', messageData);
+                
                 const response = await fetch('/user/home/api/chat.php', {
                     method: 'POST',
                     headers: {
@@ -425,7 +428,26 @@ class ChatManager {
                     })
                 });
 
-                const data = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
+
+                console.log('Send message response:', data);
 
                 if (data.success) {
                     // Message sent successfully
@@ -434,13 +456,25 @@ class ChatManager {
                     this.cancelReply();
                     this.clearSelectedFiles();
                     
-                    // Add message via socket for real-time update
+                    // Add message to UI immediately
+                    if (data.message) {
+                        console.log('Adding message to UI:', data.message);
+                        this.addMessage(data.message);
+                    } else {
+                        console.log('No message data returned, reloading messages');
+                        // Fallback: reload messages if no message data returned
+                        this.loadMessages(this.currentRoomId);
+                    }
+                    
+                    // Also try to send via socket for real-time update to other users
                     window.socketClient?.sendMessage(this.currentRoomId, content, this.replyingTo);
                 } else {
                     console.error('Failed to send message:', data.error);
+                    alert('Failed to send message: ' + (data.error || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
+                alert('Network error while sending message: ' + error.message);
             }
         }
     }
@@ -657,10 +691,18 @@ class ChatManager {
 
     // Real-time message handlers
     addMessage(message) {
+        // Ensure the message has all required properties
+        if (!message.reactions) {
+            message.reactions = [];
+        }
+        
         this.messages.push(message);
         // Re-render messages to maintain grouping
         this.renderMessages(this.messages);
         this.scrollToBottom();
+        
+        // Also update the conversation list to show the latest message
+        this.loadConversations();
     }
 
     updateMessage(message) {
