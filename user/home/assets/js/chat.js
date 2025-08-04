@@ -1507,6 +1507,66 @@ class ChatManager {
 
         placeholder.innerHTML = `<img src="${fileURL}" alt="Group Image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     }
+
+    // Notification system
+    showNotification(message, type = 'info') {
+        // Create or get existing notification container
+        let container = document.getElementById('notificationContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notificationContainer';
+            container.className = 'notification-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                pointer-events: none;
+            `;
+            document.body.appendChild(container);
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            background: ${type === 'error' ? '#f44336' : type === 'success' ? '#4caf50' : '#2196f3'};
+            color: white;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            max-width: 350px;
+            word-wrap: break-word;
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        const icon = type === 'error' ? 'fas fa-exclamation-triangle' : 
+                     type === 'success' ? 'fas fa-check-circle' : 
+                     'fas fa-info-circle';
+
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="${icon}"></i>
+                <span style="flex: 1;">${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 0;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        container.appendChild(notification);
+
+        // Auto-remove after timeout
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, type === 'error' ? 7000 : 4000);
+    }
 }
 
 // Initialize chat manager
