@@ -1,4 +1,7 @@
 <?php
+// Set JSON headers first
+header('Content-Type: application/json');
+
 // Database configuration
 $host = "localhost";
 $username = "root";
@@ -10,7 +13,9 @@ $mysqli = new mysqli($host, $username, $password, $database, 3307);
 
 // Check connection
 if ($mysqli->connect_error) {
-    die("Connection failed: " . $mysqli->connect_error);
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+    exit;
 }
 
 // Set charset to UTF-8
@@ -38,11 +43,18 @@ function send_response($data, $status_code = 200) {
 
 // Function to validate user session
 function validate_session() {
-    session_start();
-    if (!isset($_SESSION['user_id'])) {
-        send_response(['error' => 'Unauthorized'], 401);
+    try {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION['user_id'])) {
+            send_response(['error' => 'Unauthorized'], 401);
+        }
+        return $_SESSION['user_id'];
+    } catch (Exception $e) {
+        error_log("Session validation error: " . $e->getMessage());
+        send_response(['error' => 'Session error: ' . $e->getMessage()], 500);
     }
-    return $_SESSION['user_id'];
 }
 
 // Function to get user by ID

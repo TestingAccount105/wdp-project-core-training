@@ -1,8 +1,40 @@
 <?php
+// Ensure we always output JSON, even for errors
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 require_once 'config.php';
 
+// Set content type to JSON from the start
+header('Content-Type: application/json');
+
+// Global error handler to ensure all errors are returned as JSON
+set_error_handler(function($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// Global exception handler
+set_exception_handler(function($exception) {
+    error_log("Unhandled exception: " . $exception->getMessage());
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+    }
+    echo json_encode(['error' => 'Internal server error: ' . $exception->getMessage()]);
+    exit;
+});
+
 $method = $_SERVER['REQUEST_METHOD'];
-$user_id = validate_session();
+
+try {
+    $user_id = validate_session();
+} catch (Exception $e) {
+    send_response(['error' => 'Session validation failed: ' . $e->getMessage()], 401);
+    exit;
+}
 
 switch ($method) {
     case 'GET':
@@ -67,93 +99,135 @@ switch ($method) {
 function get_conversations($user_id) {
     global $mysqli;
     
-    $query = "SELECT DISTINCT cr.ID, cr.Type, cr.Name, cr.ImageUrl,
-                     (SELECT m.Content FROM ChatRoomMessage crm 
-                      INNER JOIN Message m ON crm.MessageID = m.ID 
-                      WHERE crm.RoomID = cr.ID 
-                      ORDER BY m.SentAt DESC LIMIT 1) as last_message,
-                     (SELECT m.SentAt FROM ChatRoomMessage crm 
-                      INNER JOIN Message m ON crm.MessageID = m.ID 
-                      WHERE crm.RoomID = cr.ID 
-                      ORDER BY m.SentAt DESC LIMIT 1) as last_message_time,
-                     (SELECT COUNT(*) FROM ChatRoomMessage crm 
-                      INNER JOIN Message m ON crm.MessageID = m.ID 
-                      WHERE crm.RoomID = cr.ID AND m.SentAt > COALESCE(
-                          (SELECT last_seen FROM UserLastSeen WHERE user_id = ? AND room_id = cr.ID), 
-                          '1970-01-01'
-                      )) as unread_count
-              FROM ChatRoom cr
-              INNER JOIN ChatParticipants cp ON cr.ID = cp.ChatRoomID
-              WHERE cp.UserID = ? 
-              AND (
-                  cr.Type = 'group' 
-                  OR (
-                      cr.Type = 'direct' 
-                      AND EXISTS (
-                          SELECT 1 FROM ChatParticipants cp2 
-                          INNER JOIN FriendsList f ON (
-                              (f.UserID1 = ? AND f.UserID2 = cp2.UserID) 
-                              OR (f.UserID1 = cp2.UserID AND f.UserID2 = ?)
+    try {
+        // Validate user_id
+        if (!$user_id || !is_numeric($user_id)) {
+            throw new Exception("Invalid user ID: " . $user_id);
+        }
+        
+        // Check database connection
+        if ($mysqli->connect_error) {
+            throw new Exception("Database connection failed: " . $mysqli->connect_error);
+        }
+        
+        $query = "SELECT DISTINCT cr.ID, cr.Type, cr.Name, cr.ImageUrl,
+                         (SELECT m.Content FROM ChatRoomMessage crm 
+                          INNER JOIN Message m ON crm.MessageID = m.ID 
+                          WHERE crm.RoomID = cr.ID 
+                          ORDER BY m.SentAt DESC LIMIT 1) as last_message,
+                         (SELECT m.SentAt FROM ChatRoomMessage crm 
+                          INNER JOIN Message m ON crm.MessageID = m.ID 
+                          WHERE crm.RoomID = cr.ID 
+                          ORDER BY m.SentAt DESC LIMIT 1) as last_message_time,
+                         (SELECT COUNT(*) FROM ChatRoomMessage crm 
+                          INNER JOIN Message m ON crm.MessageID = m.ID 
+                          WHERE crm.RoomID = cr.ID AND m.SentAt > COALESCE(
+                              (SELECT last_seen FROM UserLastSeen WHERE user_id = ? AND room_id = cr.ID), 
+                              '1970-01-01'
+                          )) as unread_count
+                  FROM ChatRoom cr
+                  INNER JOIN ChatParticipants cp ON cr.ID = cp.ChatRoomID
+                  WHERE cp.UserID = ? 
+                  AND (
+                      cr.Type = 'group' 
+                      OR (
+                          cr.Type = 'direct' 
+                          AND EXISTS (
+                              SELECT 1 FROM ChatParticipants cp2 
+                              INNER JOIN FriendsList f ON (
+                                  (f.UserID1 = ? AND f.UserID2 = cp2.UserID) 
+                                  OR (f.UserID1 = cp2.UserID AND f.UserID2 = ?)
+                              )
+                              WHERE cp2.ChatRoomID = cr.ID 
+                              AND cp2.UserID != ? 
+                              AND f.Status = 'accepted'
                           )
-                          WHERE cp2.ChatRoomID = cr.ID 
-                          AND cp2.UserID != ? 
-                          AND f.Status = 'accepted'
                       )
                   )
-              )
-              ORDER BY last_message_time DESC";
-    
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param("iiiiii", $user_id, $user_id, $user_id, $user_id, $user_id, $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $conversations = [];
-    while ($row = $result->fetch_assoc()) {
-        // Get participants for each conversation
-        $participants_query = "SELECT u.ID, u.Username, u.ProfilePictureUrl, u.Status, u.DisplayName, u.Discriminator
-                               FROM Users u
-                               INNER JOIN ChatParticipants cp ON u.ID = cp.UserID
-                               WHERE cp.ChatRoomID = ? AND u.ID != ?";
-        $participants_stmt = $mysqli->prepare($participants_query);
-        $participants_stmt->bind_param("ii", $row['ID'], $user_id);
-        $participants_stmt->execute();
-        $participants_result = $participants_stmt->get_result();
+                  ORDER BY last_message_time DESC";
         
-        $participants = [];
-        while ($participant = $participants_result->fetch_assoc()) {
-            $participants[] = [
-                'id' => $participant['ID'],
-                'username' => $participant['Username'],
-                'discriminator' => $participant['Discriminator'],
-                'display_name' => $participant['DisplayName'] ?: $participant['Username'],
-                'avatar' => $participant['ProfilePictureUrl'],
-                'status' => $participant['Status']
+        $stmt = $mysqli->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $mysqli->error);
+        }
+        
+        if (!$stmt->bind_param("iiiiii", $user_id, $user_id, $user_id, $user_id, $user_id, $user_id)) {
+            throw new Exception("Bind param failed: " . $stmt->error);
+        }
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+        
+        $result = $stmt->get_result();
+        if (!$result) {
+            throw new Exception("Get result failed: " . $stmt->error);
+        }
+        
+        $conversations = [];
+        while ($row = $result->fetch_assoc()) {
+            // Get participants for each conversation
+            $participants_query = "SELECT u.ID, u.Username, u.ProfilePictureUrl, u.Status, u.DisplayName, u.Discriminator
+                                   FROM Users u
+                                   INNER JOIN ChatParticipants cp ON u.ID = cp.UserID
+                                   WHERE cp.ChatRoomID = ? AND u.ID != ?";
+            $participants_stmt = $mysqli->prepare($participants_query);
+            if (!$participants_stmt) {
+                throw new Exception("Participants prepare failed: " . $mysqli->error);
+            }
+            
+            if (!$participants_stmt->bind_param("ii", $row['ID'], $user_id)) {
+                throw new Exception("Participants bind failed: " . $participants_stmt->error);
+            }
+            
+            if (!$participants_stmt->execute()) {
+                throw new Exception("Participants execute failed: " . $participants_stmt->error);
+            }
+            
+            $participants_result = $participants_stmt->get_result();
+            if (!$participants_result) {
+                throw new Exception("Participants get result failed: " . $participants_stmt->error);
+            }
+            
+            $participants = [];
+            while ($participant = $participants_result->fetch_assoc()) {
+                $participants[] = [
+                    'id' => $participant['ID'],
+                    'username' => $participant['Username'],
+                    'discriminator' => $participant['Discriminator'],
+                    'display_name' => $participant['DisplayName'] ?: $participant['Username'],
+                    'avatar' => $participant['ProfilePictureUrl'],
+                    'status' => $participant['Status']
+                ];
+            }
+            
+            // Determine display name and avatar for the conversation
+            $display_name = $row['Name'];
+            $avatar = $row['ImageUrl'];
+            
+            if ($row['Type'] === 'direct' && count($participants) === 1) {
+                $display_name = $participants[0]['display_name'];
+                $avatar = $participants[0]['avatar'];
+            }
+            
+            $conversations[] = [
+                'id' => $row['ID'],
+                'type' => $row['Type'],
+                'name' => $display_name,
+                'avatar' => $avatar,
+                'participants' => $participants,
+                'last_message' => $row['last_message'],
+                'last_message_time' => $row['last_message_time'],
+                'unread_count' => (int)$row['unread_count']
             ];
         }
         
-        // Determine display name and avatar for the conversation
-        $display_name = $row['Name'];
-        $avatar = $row['ImageUrl'];
+        send_response(['conversations' => $conversations]);
         
-        if ($row['Type'] === 'direct' && count($participants) === 1) {
-            $display_name = $participants[0]['display_name'];
-            $avatar = $participants[0]['avatar'];
-        }
-        
-        $conversations[] = [
-            'id' => $row['ID'],
-            'type' => $row['Type'],
-            'name' => $display_name,
-            'avatar' => $avatar,
-            'participants' => $participants,
-            'last_message' => $row['last_message'],
-            'last_message_time' => $row['last_message_time'],
-            'unread_count' => (int)$row['unread_count']
-        ];
+    } catch (Exception $e) {
+        error_log("get_conversations error: " . $e->getMessage());
+        send_response(['error' => 'Failed to load conversations: ' . $e->getMessage()], 500);
     }
-    
-    send_response(['conversations' => $conversations]);
 }
 
 function get_messages($user_id, $room_id) {

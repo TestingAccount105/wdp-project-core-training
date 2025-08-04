@@ -117,7 +117,31 @@ class ChatManager {
     async loadConversations() {
         try {
             const response = await fetch('/user/home/api/chat.php?action=conversations');
-            const data = await response.json();
+            
+            // Check if response is ok
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Get the text first to see what we're actually receiving
+            const text = await response.text();
+            
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                console.error('JSON parse error. Response text:', text);
+                console.error('Parse error:', parseError);
+                this.showNotification('Error loading conversations: Invalid response format', 'error');
+                return;
+            }
+            
+            if (data.error) {
+                console.error('API error:', data.error);
+                this.showNotification('Error loading conversations: ' + data.error, 'error');
+                return;
+            }
             
             if (data.conversations) {
                 this.conversations = data.conversations;
@@ -125,6 +149,7 @@ class ChatManager {
             }
         } catch (error) {
             console.error('Error loading conversations:', error);
+            this.showNotification('Error loading conversations: ' + error.message, 'error');
         }
     }
 
@@ -315,6 +340,9 @@ class ChatManager {
                     <button class="message-action-btn" data-action="reply" title="Reply">
                         <i class="fas fa-reply"></i>
                     </button>
+                    <button class="message-action-btn" data-action="copy" title="Copy Message">
+                        <i class="fas fa-copy"></i>
+                    </button>
                     ${isCurrentUser ? `
                         <button class="message-action-btn" data-action="edit" title="Edit">
                             <i class="fas fa-edit"></i>
@@ -389,6 +417,9 @@ class ChatManager {
                         break;
                     case 'reply':
                         this.startReply(messageId);
+                        break;
+                    case 'copy':
+                        this.copyMessage(messageId);
                         break;
                     case 'edit':
                         this.startEdit(messageId);
@@ -552,6 +583,55 @@ class ChatManager {
             console.error('Error editing message:', error);
             this.showErrorNotification('Network error while editing message');
         }
+    }
+
+    copyMessage(messageId) {
+        const message = this.messages.find(m => m.id == messageId);
+        if (!message) {
+            this.showErrorNotification('Message not found');
+            return;
+        }
+
+        // Copy message content to clipboard
+        navigator.clipboard.writeText(message.content).then(() => {
+            this.showSuccessNotification('Message copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy message:', err);
+            // Fallback for older browsers
+            this.fallbackCopyToClipboard(message.content);
+        });
+    }
+
+    fallbackCopyToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.width = '2em';
+        textArea.style.height = '2em';
+        textArea.style.padding = '0';
+        textArea.style.border = 'none';
+        textArea.style.outline = 'none';
+        textArea.style.boxShadow = 'none';
+        textArea.style.background = 'transparent';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                this.showSuccessNotification('Message copied to clipboard!');
+            } else {
+                this.showErrorNotification('Failed to copy message');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            this.showErrorNotification('Failed to copy message');
+        }
+        
+        document.body.removeChild(textArea);
     }
 
     async deleteMessage(messageId) {
