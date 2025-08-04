@@ -6,6 +6,8 @@ let currentCategory = "all"
 let currentSearch = ""
 let currentSort = "a_to_z"
 let currentServerId = null
+let allServersFromDB = [] // Store all servers from database
+let displayedServersCount = 0 // Track how many servers we've displayed
 const $ = window.jQuery // Declare the $ variable
 
 // Initialize page
@@ -13,6 +15,16 @@ $(document).ready(() => {
   initializeEventListeners()
   loadCategories()
   loadServers(true)
+  
+  // Add a test button for duplication (temporary for debugging)
+  $('body').append('<button id="testDuplication" style="position:fixed;top:10px;right:10px;z-index:9999;background:red;color:white;padding:10px;">TEST DUPLICATION</button>')
+  $('#testDuplication').on('click', () => {
+    console.log("=== MANUAL DUPLICATION TEST ===")
+    console.log("allServersFromDB:", allServersFromDB.length)
+    console.log("displayedServersCount:", displayedServersCount)
+    console.log("currentPage:", currentPage)
+    duplicateServers()
+  })
 })
 
 // Initialize event listeners
@@ -93,18 +105,37 @@ function initializeEventListeners() {
     }
   })
 
-  // Fixed infinite scroll
+  // Auto-trigger duplication when user reaches bottom of page
   $(window).on("scroll", throttle(() => {
     const scrollTop = $(window).scrollTop()
     const windowHeight = $(window).height()
     const documentHeight = $(document).height()
+    const distanceFromBottom = documentHeight - (scrollTop + windowHeight)
     
-    // Trigger when user is 500px from bottom
-    if (scrollTop + windowHeight >= documentHeight - 500) {
-      if (!isLoading && hasMoreServers) {
-        console.log("Loading more servers...") // Debug
-        loadServers(false)
-      }
+    // Debug scroll position when getting close to bottom
+    if (distanceFromBottom < 50) {
+      console.log(`Scroll position - Distance from bottom: ${distanceFromBottom}px`)
+      console.log(`ScrollTop: ${scrollTop}, WindowHeight: ${windowHeight}, DocumentHeight: ${documentHeight}`)
+    }
+    
+    // Trigger when user is at the very bottom (within 5px for better reliability)
+    if (distanceFromBottom <= 5 && !isLoading && hasMoreServers && allServersFromDB.length > 0) {
+      console.log("🎯 User reached bottom - Auto-triggering duplication...")
+      console.log("Current page:", currentPage)
+      console.log("Servers from DB:", allServersFromDB.length)
+      console.log("Displayed count:", displayedServersCount)
+      
+      // Always trigger duplication when user reaches bottom
+      console.log("🔄 Triggering server duplication from scroll...")
+      isLoading = true
+      $("#loadingIndicator").show()
+      
+      // Use setTimeout to simulate loading and prevent rapid fire
+      setTimeout(() => {
+        duplicateServers()
+        isLoading = false
+        $("#loadingIndicator").hide()
+      }, 300)
     }
   }, 100)) // Throttle scroll events
 
@@ -210,6 +241,8 @@ function selectSort(sort) {
 function resetAndLoadServers() {
   currentPage = 1
   hasMoreServers = true
+  allServersFromDB = [] // Reset the stored servers
+  displayedServersCount = 0 // Reset displayed count
   $("#serversGrid").empty()
   $("#noMoreServers").hide()
   loadServers(true)
@@ -257,22 +290,32 @@ function loadServers(showLoading = false) {
         return
       }
       
+      // Store servers from database for future duplication
+      if (response.servers.length > 0) {
+        allServersFromDB = allServersFromDB.concat(response.servers)
+        displayedServersCount += response.servers.length
+        console.log(`Added ${response.servers.length} servers to allServersFromDB. Total: ${allServersFromDB.length}`)
+      }
+      
       displayServers(response.servers)
 
-      // Check if we have more servers to load
+      // Check if we got fewer servers than requested (indicates end of DB results)
       if (response.servers.length < 12) {
-        hasMoreServers = false
-        if (currentPage === 1 && response.servers.length === 0) {
-          // No servers found at all
-          showNoServersMessage()
-        } else if (currentPage > 1) {
-          // No more servers to load
-          $("#noMoreServers").show()
-        }
+        console.log("Reached end of database servers (got", response.servers.length, "servers), enabling duplication mode")
+        // No auto-duplication here - let scroll handler manage it
+      }
+      
+      // Show no results message only on first page with no results
+      if (currentPage === 1 && response.servers.length === 0) {
+        showNoServersMessage()
+        hasMoreServers = false // Don't allow scrolling if no servers at all
+        console.log("No servers found, disabling infinite scroll")
       } else {
+        // Always keep hasMoreServers = true for infinite scrolling with duplication
         hasMoreServers = true
       }
 
+      console.log(`Page ${currentPage} loaded. Moving to page ${currentPage + 1}`)
       currentPage++
       updateServerCount()
     },
@@ -293,13 +336,76 @@ function loadServers(showLoading = false) {
       // If this was the first page load, show an error message
       if (currentPage === 1) {
         showErrorMessage("Unable to load servers. Please refresh the page.")
+        hasMoreServers = false
       }
     },
     complete: () => {
       isLoading = false
       $("#loadingIndicator").hide()
+      
+      // Check if we need to trigger initial duplication after a short delay
+      setTimeout(() => {
+        const documentHeight = $(document).height()
+        const windowHeight = $(window).height()
+        const distanceFromBottom = documentHeight - windowHeight
+        
+        // If page is too short to allow scrolling, trigger duplication immediately
+        if (distanceFromBottom <= 50 && allServersFromDB.length > 0 && !isLoading) {
+          console.log("Page too short for scrolling, auto-triggering duplication...")
+          duplicateServers()
+        }
+      }, 800) // Longer delay to ensure DOM is fully updated
     },
   })
+}
+
+// New function to duplicate servers for infinite scrolling
+function duplicateServers() {
+  if (allServersFromDB.length === 0) {
+    console.log("❌ No servers to duplicate - allServersFromDB is empty")
+    return
+  }
+  
+  console.log("🔄 === DUPLICATION DEBUG ===")
+  console.log("Duplicating servers for infinite scroll...")
+  console.log("Current displayed count:", displayedServersCount)
+  console.log("Available servers in DB:", allServersFromDB.length)
+  console.log("Current page:", currentPage)
+  
+  // Create a batch of servers to display (12 servers per "page")
+  const serversPerPage = 12
+  let serversToShow = []
+  
+  // Create enough servers for this "page" by cycling through available servers
+  for (let i = 0; i < serversPerPage; i++) {
+    // Use a different counter for cycling through servers
+    const cycleIndex = (displayedServersCount + i) % allServersFromDB.length
+    const sourceServer = allServersFromDB[cycleIndex]
+    
+    console.log(`Duplicating server ${cycleIndex}: ${sourceServer.Name}`)
+    
+    // Create a copy of the server with a unique ID for display
+    const duplicatedServer = {
+      ...sourceServer,
+      ID: `${sourceServer.ID}_dup_${displayedServersCount + i}`, // Unique display ID
+      originalID: sourceServer.ID // Keep original ID for join functionality
+    }
+    
+    serversToShow.push(duplicatedServer)
+  }
+  
+  // Update the displayed count after creating all duplicates
+  displayedServersCount += serversPerPage
+  
+  console.log("✅ Showing duplicated servers:", serversToShow.length)
+  console.log("New displayed count:", displayedServersCount)
+  displayServers(serversToShow)
+  
+  // Increment page for next duplication
+  currentPage++
+  updateServerCount()
+  
+  console.log("🔄 === END DUPLICATION DEBUG ===")
 }
 
 // Display servers
@@ -321,7 +427,7 @@ function displayServers(servers) {
   })
 }
 
-// Create server card
+// Create server card with support for duplicated servers
 function createServerCard(server) {
   // Add safety checks for server properties
   if (!server || !server.ID) {
@@ -339,9 +445,12 @@ function createServerCard(server) {
   const serverDescription = server.Description || "No description available"
   const serverCategory = server.Category || "General"
   const memberCount = server.member_count || 0
+  
+  // Use originalID for join functionality if it exists (for duplicated servers)
+  const serverIdForJoin = server.originalID || server.ID
 
   return $(`
-        <div class="server-card" data-server-id="${server.ID}">
+        <div class="server-card" data-server-id="${serverIdForJoin}" data-display-id="${server.ID}">
             <div class="server-card-banner">
                 ${
                   server.BannerServer
@@ -368,7 +477,7 @@ function createServerCard(server) {
                 <div class="server-meta">
                     <div class="server-created">
                         <span>🗓️</span>
-                        <span>Created ${formatDate(server.ID)}</span>
+                        <span>Created ${formatDate(server.originalID || server.ID)}</span>
                     </div>
                     <div class="server-members">
                         <span>👥</span>
@@ -568,20 +677,31 @@ function joinByInvite() {
   })
 }
 
-// Update server join status
+// Update server join status with support for duplicated servers
 function updateServerJoinStatus(serverId, isJoined) {
-  const serverCard = $(`.server-card[data-server-id="${serverId}"]`)
-  const joinBtn = serverCard.find(".join-btn")
-
-  if (isJoined) {
-    joinBtn.addClass("joined")
-    joinBtn.find(".btn-icon").text("✓")
-    joinBtn.find(".btn-text").text("JOINED")
-  } else {
-    joinBtn.removeClass("joined")
-    joinBtn.find(".btn-icon").text("+")
-    joinBtn.find(".btn-text").text("JOIN SERVER")
-  }
+  // Update all server cards with the same actual server ID (including duplicates)
+  const serverCards = $(`.server-card[data-server-id="${serverId}"]`)
+  
+  serverCards.each(function() {
+    const joinBtn = $(this).find(".join-btn")
+    
+    if (isJoined) {
+      joinBtn.addClass("joined")
+      joinBtn.find(".btn-icon").text("✓")
+      joinBtn.find(".btn-text").text("JOINED")
+    } else {
+      joinBtn.removeClass("joined")
+      joinBtn.find(".btn-icon").text("+")
+      joinBtn.find(".btn-text").text("JOIN SERVER")
+    }
+  })
+  
+  // Also update the stored server data for future duplications
+  allServersFromDB.forEach(server => {
+    if (server.ID == serverId) {
+      server.is_joined = isJoined ? 1 : 0
+    }
+  })
 }
 
 // Show join server modal
@@ -598,10 +718,16 @@ function closeAllModals() {
   currentServerId = null
 }
 
-// Update server count
+// Update server count with better counting for duplicates
 function updateServerCount() {
   const totalCards = $(".server-card").length
-  $("#serverCount").text(`${totalCards} servers available`)
+  const uniqueServers = allServersFromDB.length
+  
+  if (uniqueServers > 0 && totalCards > uniqueServers) {
+    $("#serverCount").text(`${totalCards} servers available (${uniqueServers} unique servers)`)
+  } else {
+    $("#serverCount").text(`${totalCards} servers available`)
+  }
 }
 
 // Format date
@@ -691,6 +817,21 @@ style.textContent = `
         }
     }
     
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .server-card {
+        animation: fadeInUp 0.3s ease forwards;
+    }
+    
     .no-servers-message,
     .error-message {
         display: flex;
@@ -754,6 +895,49 @@ style.textContent = `
     #inviteSubmitBtn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+    }
+    
+    .loading-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #72767d;
+        font-size: 14px;
+        grid-column: 1 / -1;
+    }
+    
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #72767d;
+        border-top: 2px solid #5865f2;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Add a subtle visual indicator for duplicated servers */
+    .server-card[data-display-id*="_dup_"] {
+        position: relative;
+    }
+    
+    .server-card[data-display-id*="_dup_"]::before {
+        content: "";
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 6px;
+        height: 6px;
+        background: #5865f2;
+        border-radius: 50%;
+        opacity: 0.3;
+        z-index: 1;
     }
 `
 document.head.appendChild(style)
