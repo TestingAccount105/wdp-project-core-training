@@ -240,46 +240,26 @@ if (isset($_POST['action'])) {
     <div class="app-container">
         <!-- Left Sidebar -->
         <div class="left-sidebar">
-            <!-- User Avatar -->
-            <div class="user-avatar-container">
-                <div class="user-avatar">
-                    <img src="/placeholder.svg?height=32&width=32" alt="User Avatar">
-                </div>
-            </div>
-            
             <!-- Server List Icons -->
             <div class="server-list">
-                <div class="server-icon home-icon">
-                    <span>🏠</span>
+                <div class="server-icon home-icon" title="Home">
+                    <span>⚔️</span>
                 </div>
                 <div class="server-separator"></div>
-                <div class="server-icon add-server" onclick="showJoinServerModal()">
+                <div class="server-icon user-server" title="My Server">
+                    <img src="https://via.placeholder.com/48/36393f/ffffff?text=👤" alt="User Server">
+                </div>
+                <div class="server-icon add-server" onclick="showJoinServerModal()" title="Add Server">
                     <span>+</span>
                 </div>
-                <div class="server-icon explore-icon active">
-                    <span>🧭</span>
-                </div>
                 <div class="server-separator"></div>
-                <div class="server-icon">
-                    <span>🎮</span>
-                </div>
-                <div class="server-icon">
-                    <span>🎵</span>
+                <div class="server-icon explore-icon active" title="Explore Servers">
+                    <span>🧭</span>
                 </div>
             </div>
             
-            <!-- Bottom Icons -->
-            <div class="bottom-icons">
-                <div class="bottom-icon">
-                    <span>🎧</span>
-                </div>
-                <div class="bottom-icon">
-                    <span>🔇</span>
-                </div>
-                <div class="bottom-icon">
-                    <span>⚙️</span>
-                </div>
-            </div>
+            <!-- User Info Section -->
+           
         </div>
 
         <!-- Categories Sidebar -->
@@ -295,6 +275,22 @@ if (isset($_POST['action'])) {
                     <span class="category-count" id="totalCount">0</span>
                 </div>
                 <!-- Categories will be loaded dynamically -->
+            </div>
+            <div class="user-info-section">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <img src="https://via.placeholder.com/32/36393f/ffffff?text=L" alt="litiyo">
+                    </div>
+                    <div class="user-details">
+                        <div class="username">litiyo</div>
+                        <div class="user-id">litiyo#9013</div>
+                    </div>
+                </div>
+                <div class="user-controls">
+                    <button class="control-btn mute-btn" title="Mute">🎤</button>
+                    <button class="control-btn deafen-btn" title="Deafen">🎧</button>
+                    <button class="control-btn settings-btn" title="Settings">⚙️</button>
+                </div>
             </div>
         </div>
 

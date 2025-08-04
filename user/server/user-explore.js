@@ -257,6 +257,13 @@ function createServerCard(server) {
 
   return $(`
         <div class="server-card" data-server-id="${server.ID}">
+            <div class="server-card-banner">
+                ${
+                  server.BannerServer
+                    ? `<img src="${server.BannerServer}" alt="Server Banner">`
+                    : ""
+                }
+            </div>
             <div class="server-card-content">
                 <div class="server-header">
                     <div class="server-icon">
@@ -269,14 +276,13 @@ function createServerCard(server) {
                     <div class="server-basic-info">
                         <h3 class="server-name">${escapeHtml(server.Name)}</h3>
                         <p class="server-description">${escapeHtml(server.Description || "No description available")}</p>
+                        <div class="server-category">${formatCategoryName(server.Category || "General")}</div>
                     </div>
                 </div>
                 
-                <div class="server-category">${formatCategoryName(server.Category || "General")}</div>
-                
                 <div class="server-meta">
                     <div class="server-created">
-                        <span>📅</span>
+                        <span>🗓️</span>
                         <span>Created ${formatDate(server.ID)}</span>
                     </div>
                     <div class="server-members">
