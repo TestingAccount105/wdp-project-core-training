@@ -1,16 +1,3 @@
-<?php
-session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../../auth/login.php');
-    exit();
-}
-
-$userId = $_SESSION['user_id'];
-$username = $_SESSION['username'] ?? 'Unknown';
-$email = $_SESSION['email'] ?? '';
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
