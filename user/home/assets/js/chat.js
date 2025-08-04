@@ -8,12 +8,26 @@ class ChatManager {
         this.selectedFiles = [];
         this.lastMessageTime = null;
         this.editingMessageId = null;
+        this.currentUserId = null;
         this.init();
     }
 
     init() {
         this.setupEventListeners();
         this.loadConversations();
+        this.getCurrentUserId();
+    }
+
+    async getCurrentUserId() {
+        try {
+            const response = await fetch('/user/home/api/user.php?action=current');
+            const data = await response.json();
+            if (data.user) {
+                this.currentUserId = data.user.id;
+            }
+        } catch (error) {
+            console.error('Error getting current user ID:', error);
+        }
     }
 
     setupEventListeners() {
@@ -284,6 +298,8 @@ class ChatManager {
     }
 
     renderMessageContent(message) {
+        const isCurrentUser = this.currentUserId && message.user_id === this.currentUserId;
+        
         return `
             <div class="message-item" data-message-id="${message.id}">
                 ${message.reply_to ? this.renderReplyReference(message.reply_to) : ''}
@@ -299,7 +315,7 @@ class ChatManager {
                     <button class="message-action-btn" data-action="reply" title="Reply">
                         <i class="fas fa-reply"></i>
                     </button>
-                    ${message.user_id === window.socketClient?.currentUser?.id ? `
+                    ${isCurrentUser ? `
                         <button class="message-action-btn" data-action="edit" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -313,11 +329,17 @@ class ChatManager {
     }
 
     renderReplyReference(replyTo) {
+        // Safety checks for missing data
+        if (!replyTo) return '';
+        
+        const username = replyTo.username || replyTo.display_name || 'Unknown User';
+        const content = replyTo.content || 'Message not found';
+        
         return `
             <div class="reply-reference" data-reply-to="${replyTo.id}">
                 <i class="fas fa-reply"></i>
-                <span class="reply-author">${replyTo.username}</span>
-                <span class="reply-content">${replyTo.content}</span>
+                <span class="reply-author">${username}</span>
+                <span class="reply-content">${content}</span>
             </div>
         `;
     }
@@ -481,11 +503,11 @@ class ChatManager {
                     window.socketClient?.sendMessage(this.currentRoomId, content, this.replyingTo);
                 } else {
                     console.error('Failed to send message:', data.error);
-                    alert('Failed to send message: ' + (data.error || 'Unknown error'));
+                    this.showErrorNotification('Failed to send message: ' + (data.error || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
-                alert('Network error while sending message: ' + error.message);
+                this.showErrorNotification('Network error while sending message: ' + error.message);
             }
         }
     }
@@ -507,19 +529,38 @@ class ChatManager {
             const data = await response.json();
 
             if (data.success) {
+                // Update the message in our local array
+                const messageIndex = this.messages.findIndex(m => m.id == messageId);
+                if (messageIndex !== -1) {
+                    this.messages[messageIndex].content = content;
+                    this.messages[messageIndex].edited_at = new Date().toISOString();
+                    // Re-render messages to show the edit immediately
+                    this.renderMessages(this.messages);
+                }
+                
                 this.cancelEdit();
-                // Update message via socket
+                
+                // Update message via socket for other users
                 window.socketClient?.editMessage(messageId, content);
+                
+                this.showSuccessNotification('Message edited successfully');
             } else {
                 console.error('Failed to edit message:', data.error);
+                this.showErrorNotification('Failed to edit message: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error editing message:', error);
+            this.showErrorNotification('Network error while editing message');
         }
     }
 
     async deleteMessage(messageId) {
         const modal = document.getElementById('deleteMessageModal');
+        if (!modal) {
+            console.error('Delete message modal not found');
+            return;
+        }
+
         modal.classList.remove('hidden');
 
         const confirmBtn = document.getElementById('confirmDelete');
@@ -541,13 +582,15 @@ class ChatManager {
                 const data = await response.json();
 
                 if (data.success) {
-                    // Delete message via socket
-                    window.socketClient?.deleteMessage(messageId);
+                    // Reload messages to show updated list
+                    this.loadMessages(this.currentRoomId);
                 } else {
                     console.error('Failed to delete message:', data.error);
+                    // this.showErrorNotification('Failed to delete message: ' + (data.error || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error deleting message:', error);
+                // this.showErrorNotification('Network error while deleting message');
             } finally {
                 modal.classList.add('hidden');
                 confirmBtn.removeEventListener('click', handleConfirm);
@@ -561,8 +604,17 @@ class ChatManager {
             cancelBtn.removeEventListener('click', handleCancel);
         };
 
+        // Close modal when clicking outside
+        const handleClickOutside = (e) => {
+            if (e.target === modal) {
+                handleCancel();
+                modal.removeEventListener('click', handleClickOutside);
+            }
+        };
+
         confirmBtn.addEventListener('click', handleConfirm);
         cancelBtn.addEventListener('click', handleCancel);
+        modal.addEventListener('click', handleClickOutside);
     }
 
     async toggleReaction(messageId, emoji) {
@@ -625,6 +677,48 @@ class ChatManager {
         const sendBtn = document.getElementById('sendBtn');
         sendBtn.innerHTML = '<i class="fas fa-save"></i>';
         sendBtn.title = 'Save changes';
+
+        // Show edit context with cancel option
+        this.showEditContext(message);
+    }
+
+    showEditContext(message) {
+        // Create or get edit context element
+        let editContext = document.getElementById('editContext');
+        if (!editContext) {
+            editContext = document.createElement('div');
+            editContext.id = 'editContext';
+            editContext.className = 'edit-context';
+            editContext.innerHTML = `
+                <div class="edit-indicator">
+                    <i class="fas fa-edit"></i>
+                    <span>Editing message</span>
+                    <button id="cancelEdit" class="cancel-edit-btn" title="Cancel Edit">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="edit-original">
+                    <span id="editOriginalContent"></span>
+                </div>
+            `;
+            
+            // Insert before message input area
+            const messageInputContainer = document.querySelector('.message-input-container') || 
+                                        document.querySelector('.message-input') || 
+                                        document.getElementById('messageInput').parentElement;
+            if (messageInputContainer) {
+                messageInputContainer.insertBefore(editContext, messageInputContainer.firstChild);
+            }
+
+            // Add cancel event listener
+            document.getElementById('cancelEdit').addEventListener('click', () => {
+                this.cancelEdit();
+            });
+        }
+
+        // Update content
+        document.getElementById('editOriginalContent').textContent = message.content;
+        editContext.classList.remove('hidden');
     }
 
     cancelReply() {
@@ -642,6 +736,12 @@ class ChatManager {
         const sendBtn = document.getElementById('sendBtn');
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
         sendBtn.title = 'Send message';
+
+        // Hide edit context
+        const editContext = document.getElementById('editContext');
+        if (editContext) {
+            editContext.classList.add('hidden');
+        }
     }
 
     handleFileSelection(files) {
@@ -683,6 +783,77 @@ class ChatManager {
         this.showFilePreview();
     }
 
+    showEmojiPickerForMessage(messageId, button) {
+        // Simple emoji picker - you can replace this with a more sophisticated one
+        const emojis = ['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '👏', '🙏', '🔥'];
+        
+        // Create emoji picker container
+        let picker = document.getElementById('emojiPicker');
+        if (!picker) {
+            picker = document.createElement('div');
+            picker.id = 'emojiPicker';
+            picker.className = 'emoji-picker';
+            document.body.appendChild(picker);
+        }
+
+        // Position the picker near the button
+        const rect = button.getBoundingClientRect();
+        picker.style.left = rect.left + 'px';
+        picker.style.top = (rect.top - 60) + 'px';
+        picker.style.display = 'flex';
+
+        // Populate with emojis
+        picker.innerHTML = emojis.map(emoji => 
+            `<button class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`
+        ).join('');
+
+        // Add click handlers
+        picker.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('emoji-btn')) {
+                const emoji = e.target.dataset.emoji;
+                await this.reactToMessage(messageId, emoji);
+                picker.style.display = 'none';
+            }
+        });
+
+        // Close picker when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', function closeEmojiPicker(e) {
+                if (!picker.contains(e.target) && e.target !== button) {
+                    picker.style.display = 'none';
+                    document.removeEventListener('click', closeEmojiPicker);
+                }
+            });
+        }, 100);
+    }
+
+    async reactToMessage(messageId, emoji) {
+        try {
+            const response = await fetch('/user/home/api/chat.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'react_message',
+                    message_id: messageId,
+                    emoji: emoji
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Reload messages to show updated reactions
+                this.loadMessages(this.currentRoomId);
+            } else {
+                console.error('Failed to react to message:', data.error);
+            }
+        } catch (error) {
+            console.error('Error reacting to message:', error);
+        }
+    }
+
     clearSelectedFiles() {
         this.selectedFiles = [];
         document.getElementById('filePreviewContainer').classList.add('hidden');
@@ -705,6 +876,19 @@ class ChatManager {
         // Ensure the message has all required properties
         if (!message.reactions) {
             message.reactions = [];
+        }
+        
+        // If this message is a reply, make sure we have the complete reply reference data
+        if (message.reply_to && (!message.reply_to.username || !message.reply_to.content)) {
+            // Find the original message in our current messages array
+            const originalMessage = this.messages.find(m => m.id == message.reply_to.id || m.id == message.reply_to);
+            if (originalMessage) {
+                message.reply_to = {
+                    id: originalMessage.id,
+                    username: originalMessage.username,
+                    content: originalMessage.content
+                };
+            }
         }
         
         this.messages.push(message);
@@ -809,14 +993,32 @@ class ChatManager {
     }
 
     formatMessageTime(timestamp) {
+        if (!timestamp) return '';
+        
         const date = new Date(timestamp);
         const now = new Date();
-        const diffInHours = (now - date) / (1000 * 60 * 60);
+        const diffInMs = now - date;
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-        if (diffInHours < 24) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else {
-            return date.toLocaleDateString();
+        // Today - show time
+        if (diffInDays === 0) {
+            return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        // Yesterday
+        else if (diffInDays === 1) {
+            return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        // This year - show month and day
+        else if (date.getFullYear() === now.getFullYear()) {
+            return date.toLocaleDateString([], { month: '2-digit', day: '2-digit' }) + 
+                   ` at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        // Different year - show full date
+        else {
+            return date.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }) + 
+                   ` at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         }
     }
 
@@ -850,6 +1052,68 @@ class ChatManager {
                 messageElement.classList.remove('highlighted');
             }, 2000);
         }
+    }
+
+    showErrorNotification(message) {
+        // Create or get existing notification container
+        let container = document.getElementById('errorNotifications');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'errorNotifications';
+            container.className = 'error-notifications';
+            document.body.appendChild(container);
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'error-notification';
+        notification.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>${message}</span>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        container.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    showSuccessNotification(message) {
+        // Create or get existing notification container
+        let container = document.getElementById('successNotifications');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'successNotifications';
+            container.className = 'success-notifications';
+            document.body.appendChild(container);
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'success-notification';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <span>${message}</span>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        container.appendChild(notification);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 3000);
     }
 
     // Create DM Modal functionality
@@ -960,7 +1224,7 @@ class ChatManager {
         const selectedItems = document.querySelectorAll('#dmUserList .user-item.selected');
         
         if (selectedItems.length === 0) {
-            alert('Please select at least one user');
+            this.showErrorNotification('Please select at least one user');
             return;
         }
 
@@ -993,11 +1257,11 @@ class ChatManager {
                 await this.loadConversations();
                 await this.openChat(data.room_id);
             } else {
-                alert(data.error || 'Failed to create conversation');
+                this.showErrorNotification(data.error || 'Failed to create conversation');
             }
         } catch (error) {
             console.error('Error creating direct message:', error);
-            alert('Network error. Please try again.');
+            this.showErrorNotification('Network error. Please try again.');
         }
     }
 

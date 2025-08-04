@@ -791,6 +791,94 @@ body {
     50% { opacity: 0.5; }
 }
 
+/* Emoji Picker */
+.emoji-picker {
+    position: fixed;
+    background: var(--bg-floating);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    padding: 8px;
+    display: none;
+    gap: 4px;
+    flex-wrap: wrap;
+    width: 200px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    padding: 4px;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.emoji-btn:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* Notification System */
+.error-notifications, .success-notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+}
+
+.error-notification, .success-notification {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: slideInRight 0.3s ease-out;
+    position: relative;
+}
+
+.error-notification {
+    background-color: #f04747;
+    color: white;
+}
+
+.success-notification {
+    background-color: #43b581;
+    color: white;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius-small);
+    transition: background-color 0.15s ease;
+    margin-left: auto;
+}
+
+.notification-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 /* Message Input */
 .message-input-container {
     padding: 16px;
@@ -932,11 +1020,6 @@ body {
 
 .message-input textarea::placeholder {
     color: var(--text-muted);
-}
-
-.message-actions {
-    display: flex;
-    gap: 8px;
 }
 
 /* Active Now Section */
@@ -1446,4 +1529,60 @@ body {
         width: 100%;
         overflow-x: auto;
     }
+}
+
+/* Edit Context Styles */
+.edit-context {
+    background-color: var(--bg-floating);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.edit-context.hidden {
+    display: none;
+}
+
+.edit-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.edit-indicator i {
+    color: var(--yellow-primary);
+}
+
+.cancel-edit-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius-small);
+    margin-left: auto;
+    transition: all 0.15s ease;
+}
+
+.cancel-edit-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--interactive-hover);
+}
+
+.edit-original {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius-small);
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-left: 3px solid var(--yellow-primary);
+}
+
+.edit-original span {
+    font-style: italic;
 }
