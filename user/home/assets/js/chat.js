@@ -645,14 +645,10 @@ class ChatManager {
             }
 
             if (data.success) {
-                console.log('Reaction successful, updating UI for message:', messageId);
-                console.log('Reactions data:', data.reactions);
-                
                 // Update reactions immediately in the UI
                 if (data.reactions) {
                     this.updateMessageReactions(messageId, data.reactions);
                 } else {
-                    console.log('No reactions data, refreshing from server');
                     // Fallback: reload just the reactions for this message
                     await this.refreshMessageReactions(messageId);
                 }
@@ -809,8 +805,12 @@ class ChatManager {
     }
 
     showEmojiPickerForMessage(messageId, button) {
-        // Simple emoji picker - you can replace this with a more sophisticated one
-        const emojis = ['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '👏', '🙏', '🔥'];
+        // Expanded emoji selection
+        const emojis = [
+            '�', '❤️', '😮', '�', '�', '�', '�', '👏', '🙏', '🔥',
+            '🎉', '💯', '😎', '🤔', '😊', '😭', '🥺', '😤', '🙄', '😴',
+            '🤗', '🤯', '🥳', '😋', '🤤', '🤢', '🤮', '😈', '👻', '💀'
+        ];
         
         // Create emoji picker container
         let picker = document.getElementById('emojiPicker');
@@ -821,11 +821,35 @@ class ChatManager {
             document.body.appendChild(picker);
         }
 
-        // Position the picker near the button
+        // Smart positioning to prevent overflow
         const rect = button.getBoundingClientRect();
-        picker.style.left = rect.left + 'px';
-        picker.style.top = (rect.top - 60) + 'px';
-        picker.style.display = 'flex';
+        const pickerWidth = 280;
+        const pickerHeight = 320;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        let left = rect.left;
+        let top = rect.top - pickerHeight - 10; // Default: above button
+        
+        // Adjust horizontal position if overflowing
+        if (left + pickerWidth > windowWidth) {
+            left = windowWidth - pickerWidth - 20;
+        }
+        if (left < 20) {
+            left = 20;
+        }
+        
+        // Adjust vertical position if overflowing
+        if (top < 20) {
+            top = rect.bottom + 10; // Show below button if no space above
+        }
+        if (top + pickerHeight > windowHeight) {
+            top = windowHeight - pickerHeight - 20;
+        }
+        
+        picker.style.left = left + 'px';
+        picker.style.top = top + 'px';
+        picker.style.display = 'grid';
 
         // Populate with emojis
         picker.innerHTML = emojis.map(emoji => 
@@ -975,42 +999,37 @@ class ChatManager {
     }
 
     updateMessageReactions(messageId, reactions) {
-        console.log('updateMessageReactions called for message:', messageId);
-        console.log('New reactions:', reactions);
+        // Ensure messageId is converted to the same type as stored in messages
+        const numericMessageId = parseInt(messageId);
+        const stringMessageId = String(messageId);
         
-        const message = this.messages.find(m => m.id === messageId);
+        const message = this.messages.find(m => m.id == messageId || m.id === numericMessageId || m.id === stringMessageId);
+        
         if (message) {
             message.reactions = reactions;
             // Update just the reactions for this message
             const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            console.log('Message element found:', !!messageElement);
             
             if (messageElement) {
                 const reactionsContainer = messageElement.querySelector('.message-reactions');
-                console.log('Existing reactions container found:', !!reactionsContainer);
                 
                 if (reactionsContainer) {
                     // Replace the entire reactions container
                     const newReactionsHTML = this.renderMessageReactions(reactions);
-                    console.log('New reactions HTML:', newReactionsHTML);
-                    
                     if (reactions.length > 0) {
                         reactionsContainer.outerHTML = newReactionsHTML;
-                        console.log('Reactions container updated');
                     } else {
                         // If no reactions, remove the container
                         reactionsContainer.remove();
-                        console.log('Reactions container removed');
                     }
                 } else if (reactions.length > 0) {
                     // Add new reactions container if it doesn't exist
                     const content = messageElement.querySelector('.message-content');
-                    content.insertAdjacentHTML('afterend', this.renderMessageReactions(reactions));
-                    console.log('New reactions container added');
+                    if (content) {
+                        content.insertAdjacentHTML('afterend', this.renderMessageReactions(reactions));
+                    }
                 }
             }
-        } else {
-            console.log('Message not found in messages array');
         }
     }
 
