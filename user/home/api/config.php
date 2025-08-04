@@ -1,7 +1,4 @@
 <?php
-// Set JSON headers first
-header('Content-Type: application/json');
-
 // Database configuration
 $host = "localhost";
 $username = "root";
@@ -13,7 +10,10 @@ $mysqli = new mysqli($host, $username, $password, $database, 3307);
 
 // Check connection
 if ($mysqli->connect_error) {
-    http_response_code(500);
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+    }
     echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
     exit;
 }
@@ -32,11 +32,13 @@ function sanitize_input($data) {
 
 // Function to send JSON response
 function send_response($data, $status_code = 200) {
-    http_response_code($status_code);
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    if (!headers_sent()) {
+        http_response_code($status_code);
+        header('Content-Type: application/json');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    }
     echo json_encode($data);
     exit;
 }

@@ -27,7 +27,7 @@ set_exception_handler(function($exception) {
     exit;
 });
 
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 try {
     $user_id = validate_session();

@@ -1,3 +1,16 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../../auth/login.php');
+    exit();
+}
+
+$userId = $_SESSION['user_id'];
+$username = $_SESSION['username'] ?? 'Unknown';
+$email = $_SESSION['email'] ?? '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,7 +30,7 @@
                 <div class="user-info">
                     <img src="" alt="User Avatar" class="user-avatar" id="currentUserAvatar">
                     <div class="user-details">
-                        <span class="username" id="currentUsername">Loading...</span>
+                        <span class="username" id="currentUsername"><?php echo htmlspecialchars($username); ?></span>
                         <span class="discriminator" id="currentDiscriminator">#0000</span>
                     </div>
                 </div>
