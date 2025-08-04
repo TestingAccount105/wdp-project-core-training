@@ -18,19 +18,26 @@ if (isset($_POST['action'])) {
         $offset = ($page - 1) * $limit;
         $category = $_POST['category'] ?? 'all';
         $search = $_POST['search'] ?? '';
-        $sort = $_POST['sort'] ?? 'newest';
+        $sort = $_POST['sort'] ?? 'a_to_z';
         
         // Build WHERE clause
         $whereClause = "WHERE s.IsPrivate = 0";
-        $params = [];
-        $types = "";
+        $params = [$currentUserId];
+        $types = "i";
         
+        // Fix search functionality
         if (!empty($search)) {
             $whereClause .= " AND (s.Name LIKE ? OR s.Description LIKE ?)";
             $searchParam = "%$search%";
             $params[] = $searchParam;
             $params[] = $searchParam;
             $types .= "ss";
+        }
+        
+        // Fix category filtering (if you want to implement it properly)
+        if ($category !== 'all' && !empty($category)) {
+            // For now, since there's no category column, we'll skip this
+            // You could add a Category column to your Server table or implement tag-based filtering
         }
         
         // Build ORDER BY clause
@@ -55,10 +62,10 @@ if (isset($_POST['action'])) {
                 $orderClause = "ORDER BY s.Name DESC";
                 break;
             default:
-                $orderClause = "ORDER BY s.ID DESC";
+                $orderClause = "ORDER BY s.Name ASC";
         }
         
-        // Get servers with member count (using only tables from ERD)
+        // Get servers with member count
         $query = "SELECT 
                     s.ID,
                     s.Name,
@@ -66,7 +73,7 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
-                    COUNT(usm.UserID) as member_count,
+                    COUNT(DISTINCT usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
@@ -76,20 +83,39 @@ if (isset($_POST['action'])) {
                   $orderClause
                   LIMIT $limit OFFSET $offset";
         
-        // Add current user ID to params
-        array_unshift($params, $currentUserId);
-        $types = "i" . $types;
-        
         $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            error_log("Prepare failed: " . $conn->error);
+            echo json_encode(['error' => 'Database prepare error: ' . $conn->error, 'servers' => []]);
+            exit();
+        }
+        
         if (!empty($params)) {
             $stmt->bind_param($types, ...$params);
         }
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            error_log("Execute failed: " . $stmt->error);
+            echo json_encode(['error' => 'Database execute error: ' . $stmt->error, 'servers' => []]);
+            exit();
+        }
+        
         $result = $stmt->get_result();
         
         $servers = [];
         while ($row = $result->fetch_assoc()) {
-            $servers[] = $row;
+            $server = [
+                'ID' => $row['ID'] ?? 0,
+                'Name' => $row['Name'] ?? 'Unnamed Server',
+                'IconServer' => $row['IconServer'] ?? null,
+                'Description' => $row['Description'] ?? '',
+                'BannerServer' => $row['BannerServer'] ?? null,
+                'InviteLink' => $row['InviteLink'] ?? '',
+                'member_count' => (int)($row['member_count'] ?? 0),
+                'is_joined' => (int)($row['is_joined'] ?? 0),
+                'Category' => 'General' // Default category since it's not in your schema
+            ];
+            $servers[] = $server;
         }
         
         echo json_encode(['servers' => $servers]);
@@ -97,18 +123,18 @@ if (isset($_POST['action'])) {
     }
     
     if ($_POST['action'] === 'get_categories') {
-        // Since there's no category in the ERD, we'll create mock categories based on server names
-        // In a real implementation, you might add a category column to the Server table
+        // Get actual server count
         $query = "SELECT COUNT(*) as total_servers FROM Server WHERE IsPrivate = 0";
         $result = $conn->query($query);
-        $totalServers = $result->fetch_assoc()['total_servers'];
+        $totalServers = $result ? $result->fetch_assoc()['total_servers'] : 0;
         
-        // Mock categories for demo purposes
+        // Since there's no category column, create mock categories
+        // You should add a Category column to your Server table for real implementation
         $categories = [
-            ['Category' => 'Gaming', 'server_count' => 3],
-            ['Category' => 'Music', 'server_count' => 4],
+            ['Category' => 'Gaming', 'server_count' => 2],
+            ['Category' => 'Music', 'server_count' => 1],
             ['Category' => 'Education', 'server_count' => 1],
-            ['Category' => 'Science & Tech', 'server_count' => 0],
+            ['Category' => 'Science & Tech', 'server_count' => 1],
             ['Category' => 'Entertainment', 'server_count' => 0],
             ['Category' => 'Community', 'server_count' => 0]
         ];
@@ -130,7 +156,7 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
-                    COUNT(usm.UserID) as member_count,
+                    COUNT(DISTINCT usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
@@ -154,13 +180,31 @@ if (isset($_POST['action'])) {
     if ($_POST['action'] === 'join_server') {
         $serverId = (int)$_POST['server_id'];
         
+        // Debug: Log the join attempt
+        error_log("Join server attempt - UserID: $currentUserId, ServerID: $serverId");
+        
+        // Check if server exists and is not private
+        $serverQuery = "SELECT ID, Name FROM Server WHERE ID = ? AND IsPrivate = 0";
+        $serverStmt = $conn->prepare($serverQuery);
+        $serverStmt->bind_param("i", $serverId);
+        $serverStmt->execute();
+        $serverResult = $serverStmt->get_result();
+        
+        if ($serverResult->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Server not found or is private']);
+            exit();
+        }
+        
+        $server = $serverResult->fetch_assoc();
+        
         // Check if already joined
         $checkQuery = "SELECT ID FROM UserServerMemberships WHERE UserID = ? AND ServerID = ?";
         $checkStmt = $conn->prepare($checkQuery);
         $checkStmt->bind_param("ii", $currentUserId, $serverId);
         $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
         
-        if ($checkStmt->get_result()->num_rows > 0) {
+        if ($checkResult->num_rows > 0) {
             echo json_encode(['success' => false, 'message' => 'You are already a member of this server']);
             exit();
         }
@@ -171,9 +215,10 @@ if (isset($_POST['action'])) {
         $joinStmt->bind_param("ii", $currentUserId, $serverId);
         
         if ($joinStmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Successfully joined the server!']);
+            echo json_encode(['success' => true, 'message' => "Successfully joined {$server['Name']}!"]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to join server']);
+            error_log("Failed to join server: " . $joinStmt->error);
+            echo json_encode(['success' => false, 'message' => 'Failed to join server: Database error']);
         }
         exit();
     }
@@ -257,9 +302,6 @@ if (isset($_POST['action'])) {
                     <span>🧭</span>
                 </div>
             </div>
-            
-            <!-- User Info Section -->
-           
         </div>
 
         <!-- Categories Sidebar -->

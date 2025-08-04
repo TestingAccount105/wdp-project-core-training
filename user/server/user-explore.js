@@ -23,13 +23,17 @@ function initializeEventListeners() {
     selectCategory(category)
   })
 
-  // Search input
+  // Search input with better debouncing
   $("#searchInput").on(
     "input",
     debounce(function () {
-      currentSearch = $(this).val().trim()
-      resetAndLoadServers()
-    }, 500),
+      const newSearch = $(this).val().trim()
+      console.log("Search triggered:", newSearch) // Debug line
+      if (newSearch !== currentSearch) {
+        currentSearch = newSearch
+        resetAndLoadServers()
+      }
+    }, 300), // Reduced debounce time for better responsiveness
   )
 
   // Sort dropdown
@@ -44,8 +48,10 @@ function initializeEventListeners() {
   })
 
   // Close sort dropdown when clicking outside
-  $(document).on("click", () => {
-    $("#sortDropdown").removeClass("active")
+  $(document).on("click", (e) => {
+    if (!$(e.target).closest('.sort-container').length) {
+      $("#sortDropdown").removeClass("active")
+    }
   })
 
   // Server card clicks
@@ -87,14 +93,20 @@ function initializeEventListeners() {
     }
   })
 
-  // Infinite scroll
-  $(window).on("scroll", () => {
-    if ($(window).scrollTop() + $(window).height() >= $(document).height() - 1000) {
+  // Fixed infinite scroll
+  $(window).on("scroll", throttle(() => {
+    const scrollTop = $(window).scrollTop()
+    const windowHeight = $(window).height()
+    const documentHeight = $(document).height()
+    
+    // Trigger when user is 500px from bottom
+    if (scrollTop + windowHeight >= documentHeight - 500) {
       if (!isLoading && hasMoreServers) {
+        console.log("Loading more servers...") // Debug
         loadServers(false)
       }
     }
-  })
+  }, 100)) // Throttle scroll events
 
   // Keyboard shortcuts
   $(document).on("keydown", (e) => {
@@ -112,10 +124,13 @@ function loadCategories() {
     data: { action: "get_categories" },
     dataType: "json",
     success: (response) => {
-      displayCategories(response.categories, response.total_servers)
+      if (response && response.categories) {
+        displayCategories(response.categories, response.total_servers)
+      }
     },
-    error: () => {
-      console.error("Failed to load categories")
+    error: (xhr, status, error) => {
+      console.error("Failed to load categories:", error)
+      showToast("Failed to load categories", "error")
     },
   })
 }
@@ -125,7 +140,7 @@ function displayCategories(categories, totalServers) {
   const categoriesList = $("#categoriesList")
 
   // Update total count
-  $("#totalCount").text(totalServers)
+  $("#totalCount").text(totalServers || 0)
 
   // Add category items
   categories.forEach((category) => {
@@ -161,7 +176,11 @@ function getCategoryIcon(category) {
 
 // Format category name
 function formatCategoryName(category) {
-  return category.charAt(0).toUpperCase() + category.slice(1)
+  if (!category || category === null || category === undefined) {
+    return 'General'
+  }
+  const categoryStr = String(category)
+  return categoryStr.charAt(0).toUpperCase() + categoryStr.slice(1)
 }
 
 // Select category
@@ -192,14 +211,19 @@ function resetAndLoadServers() {
   currentPage = 1
   hasMoreServers = true
   $("#serversGrid").empty()
+  $("#noMoreServers").hide()
   loadServers(true)
 }
 
-// Load servers
+// Load servers with better error handling
 function loadServers(showLoading = false) {
-  if (isLoading) return
+  if (isLoading) {
+    console.log("Already loading, skipping...")
+    return
+  }
 
   isLoading = true
+  console.log(`Loading servers - Page: ${currentPage}, Search: "${currentSearch}", Category: ${currentCategory}, Sort: ${currentSort}`)
 
   if (showLoading) {
     $("#loadingIndicator").show()
@@ -216,20 +240,60 @@ function loadServers(showLoading = false) {
       sort: currentSort,
     },
     dataType: "json",
+    timeout: 10000, // 10 second timeout
     success: (response) => {
+      console.log("AJAX Response:", response) // Debug line
+      
+      // Validate response structure
+      if (!response || typeof response !== 'object') {
+        console.error('Invalid response format:', response)
+        showToast("Invalid server response", "error")
+        return
+      }
+      
+      if (!response.servers || !Array.isArray(response.servers)) {
+        console.error('Invalid servers array in response:', response)
+        showToast("No servers data received", "error")
+        return
+      }
+      
       displayServers(response.servers)
 
+      // Check if we have more servers to load
       if (response.servers.length < 12) {
         hasMoreServers = false
-        $("#noMoreServers").show()
+        if (currentPage === 1 && response.servers.length === 0) {
+          // No servers found at all
+          showNoServersMessage()
+        } else if (currentPage > 1) {
+          // No more servers to load
+          $("#noMoreServers").show()
+        }
+      } else {
+        hasMoreServers = true
       }
 
       currentPage++
       updateServerCount()
     },
-    error: () => {
-      console.error("Failed to load servers2")
-      showToast("Failed to load servers2", "error")
+    error: (xhr, status, error) => {
+      console.error("AJAX Error:", xhr.responseText, status, error)
+      let errorMessage = "Failed to load servers"
+      
+      if (status === 'timeout') {
+        errorMessage = "Request timed out. Please try again."
+      } else if (xhr.status === 0) {
+        errorMessage = "Network error. Please check your connection."
+      } else if (xhr.status >= 500) {
+        errorMessage = "Server error. Please try again later."
+      }
+      
+      showToast(errorMessage, "error")
+      
+      // If this was the first page load, show an error message
+      if (currentPage === 1) {
+        showErrorMessage("Unable to load servers. Please refresh the page.")
+      }
     },
     complete: () => {
       isLoading = false
@@ -242,18 +306,39 @@ function loadServers(showLoading = false) {
 function displayServers(servers) {
   const serversGrid = $("#serversGrid")
 
-  servers.forEach((server) => {
-    const serverCard = createServerCard(server)
-    serversGrid.append(serverCard)
+  if (!servers || !Array.isArray(servers)) {
+    console.error('Invalid servers data:', servers)
+    return
+  }
+
+  servers.forEach((server, index) => {
+    try {
+      const serverCard = createServerCard(server)
+      serversGrid.append(serverCard)
+    } catch (error) {
+      console.error(`Error creating server card for server ${index}:`, error, server)
+    }
   })
 }
 
 // Create server card
 function createServerCard(server) {
-  const memberText = server.member_count == 1 ? "member" : "members"
-  const joinButtonText = server.is_joined == 1 ? "JOINED" : "JOIN SERVER"
-  const joinButtonClass = server.is_joined == 1 ? "join-btn joined" : "join-btn"
-  const joinButtonIcon = server.is_joined == 1 ? "✓" : "+"
+  // Add safety checks for server properties
+  if (!server || !server.ID) {
+    console.error('Invalid server data:', server)
+    return $('<div></div>') // Return empty div if server data is invalid
+  }
+  
+  const memberText = (server.member_count == 1) ? "member" : "members"
+  const joinButtonText = (server.is_joined == 1) ? "JOINED" : "JOIN SERVER"
+  const joinButtonClass = (server.is_joined == 1) ? "join-btn joined" : "join-btn"
+  const joinButtonIcon = (server.is_joined == 1) ? "✓" : "+"
+  
+  // Safe property access with fallbacks
+  const serverName = server.Name || 'Unnamed Server'
+  const serverDescription = server.Description || "No description available"
+  const serverCategory = server.Category || "General"
+  const memberCount = server.member_count || 0
 
   return $(`
         <div class="server-card" data-server-id="${server.ID}">
@@ -270,13 +355,13 @@ function createServerCard(server) {
                         ${
                           server.IconServer
                             ? `<img src="${server.IconServer}" alt="Server Icon">`
-                            : server.Name.charAt(0).toUpperCase()
+                            : serverName.charAt(0).toUpperCase()
                         }
                     </div>
                     <div class="server-basic-info">
-                        <h3 class="server-name">${escapeHtml(server.Name)}</h3>
-                        <p class="server-description">${escapeHtml(server.Description || "No description available")}</p>
-                        <div class="server-category">${formatCategoryName(server.Category || "General")}</div>
+                        <h3 class="server-name">${escapeHtml(serverName)}</h3>
+                        <p class="server-description">${escapeHtml(serverDescription)}</p>
+                        <div class="server-category">${formatCategoryName(serverCategory)}</div>
                     </div>
                 </div>
                 
@@ -287,7 +372,7 @@ function createServerCard(server) {
                     </div>
                     <div class="server-members">
                         <span>👥</span>
-                        <span>${server.member_count} ${memberText}</span>
+                        <span>${memberCount} ${memberText}</span>
                     </div>
                 </div>
                 
@@ -298,6 +383,34 @@ function createServerCard(server) {
             </div>
         </div>
     `)
+}
+
+// Show no servers message
+function showNoServersMessage() {
+  const serversGrid = $("#serversGrid")
+  const message = currentSearch 
+    ? `No servers found matching "${currentSearch}"`
+    : "No servers available"
+    
+  serversGrid.html(`
+    <div class="no-servers-message">
+      <div class="no-servers-icon">🔍</div>
+      <h3>${message}</h3>
+      <p>Try adjusting your search terms or browse different categories.</p>
+    </div>
+  `)
+}
+
+// Show error message
+function showErrorMessage(message) {
+  const serversGrid = $("#serversGrid")
+  serversGrid.html(`
+    <div class="error-message">
+      <div class="error-icon">⚠️</div>
+      <h3>Error Loading Servers</h3>
+      <p>${message}</p>
+    </div>
+  `)
 }
 
 // Show server details
@@ -329,23 +442,29 @@ function showServerDetails(serverId) {
 
 // Display server details
 function displayServerDetails(server) {
+  if (!server) {
+    console.error('No server data provided to displayServerDetails')
+    return
+  }
+  
   // Set banner
   if (server.BannerServer) {
     $("#serverBanner").html(`<img src="${server.BannerServer}" alt="Server Banner">`)
   } else {
-    $("#serverBanner").html('<img src="/placeholder.svg?height=120&width=600" alt="Server Banner">')
+    $("#serverBanner").html('<div class="default-banner">No banner available</div>')
   }
 
   // Set avatar
   if (server.IconServer) {
     $("#serverAvatar").html(`<img src="${server.IconServer}" alt="Server Icon">`)
   } else {
-    $("#serverAvatar").html('<img src="/placeholder.svg?height=80&width=80" alt="Server Avatar">')
+    const serverName = server.Name || 'Server'
+    $("#serverAvatar").html(`<div class="default-avatar">${serverName.charAt(0).toUpperCase()}</div>`)
   }
 
-  // Set details
-  $("#serverName").text(server.Name)
-  $("#serverMemberCount").text(`${server.member_count} members`)
+  // Set details with safe access
+  $("#serverName").text(server.Name || 'Unnamed Server')
+  $("#serverMemberCount").text(`${server.member_count || 0} members`)
   $("#serverDescription").text(server.Description || "No description available")
 
   // Set join button state
@@ -358,9 +477,19 @@ function displayServerDetails(server) {
   }
 }
 
-// Join server
+// Join server with better error handling
 function joinServer(serverId) {
-  if (!serverId) return
+  if (!serverId) {
+    showToast("Invalid server ID", "error")
+    return
+  }
+
+  // Disable join button to prevent double-clicking
+  const joinBtn = $(`.server-card[data-server-id="${serverId}"] .join-btn`)
+  const modalJoinBtn = $("#joinServerBtn")
+  
+  joinBtn.prop('disabled', true)
+  modalJoinBtn.prop('disabled', true)
 
   $.ajax({
     url: "user-explore.php",
@@ -386,9 +515,15 @@ function joinServer(serverId) {
         showToast(response.message, "error")
       }
     },
-    error: () => {
-      showToast("Failed to join server", "error")
+    error: (xhr, status, error) => {
+      console.error("Join server error:", xhr.responseText, status, error)
+      showToast("Failed to join server. Please try again.", "error")
     },
+    complete: () => {
+      // Re-enable buttons
+      joinBtn.prop('disabled', false)
+      modalJoinBtn.prop('disabled', false)
+    }
   })
 }
 
@@ -400,6 +535,9 @@ function joinByInvite() {
     showToast("Please enter an invite code", "error")
     return
   }
+
+  // Disable submit button
+  $("#inviteSubmitBtn").prop('disabled', true)
 
   $.ajax({
     url: "user-explore.php",
@@ -424,6 +562,9 @@ function joinByInvite() {
     error: () => {
       showToast("Failed to join server", "error")
     },
+    complete: () => {
+      $("#inviteSubmitBtn").prop('disabled', false)
+    }
   })
 }
 
@@ -477,8 +618,11 @@ function formatDate(id) {
 
 // Escape HTML
 function escapeHtml(text) {
+  if (!text || text === null || text === undefined) {
+    return ''
+  }
   const div = document.createElement("div")
-  div.textContent = text
+  div.textContent = String(text) // Convert to string to prevent undefined issues
   return div.innerHTML
 }
 
@@ -486,7 +630,7 @@ function escapeHtml(text) {
 function showToast(message, type = "info") {
   const toastContainer = $("#toastContainer")
 
-  const toast = $(`<div class="toast ${type}">${message}</div>`)
+  const toast = $(`<div class="toast ${type}">${escapeHtml(message)}</div>`)
   toastContainer.append(toast)
 
   // Auto remove after 5 seconds
@@ -506,20 +650,34 @@ function showToast(message, type = "info") {
   })
 }
 
-// Debounce function
+// Improved debounce function
 function debounce(func, wait) {
   let timeout
   return function executedFunction(...args) {
     const later = () => {
       clearTimeout(timeout)
-      func(...args)
+      func.apply(this, args)
     }
     clearTimeout(timeout)
     timeout = setTimeout(later, wait)
   }
 }
 
-// Add slide out animation
+// Throttle function for scroll events
+function throttle(func, limit) {
+  let inThrottle
+  return function() {
+    const args = arguments
+    const context = this
+    if (!inThrottle) {
+      func.apply(context, args)
+      inThrottle = true
+      setTimeout(() => inThrottle = false, limit)
+    }
+  }
+}
+
+// Add slide out animation and custom styles
 const style = document.createElement("style")
 style.textContent = `
     @keyframes toastSlideOut {
@@ -531,6 +689,71 @@ style.textContent = `
             opacity: 0;
             transform: translateX(100%);
         }
+    }
+    
+    .no-servers-message,
+    .error-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+        color: #72767d;
+        grid-column: 1 / -1;
+    }
+    
+    .no-servers-icon,
+    .error-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+    
+    .no-servers-message h3,
+    .error-message h3 {
+        margin: 0 0 8px 0;
+        color: #ffffff;
+        font-size: 20px;
+    }
+    
+    .no-servers-message p,
+    .error-message p {
+        margin: 0;
+        font-size: 14px;
+    }
+    
+    .default-banner {
+        width: 100%;
+        height: 120px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 500;
+    }
+    
+    .default-avatar {
+        width: 80px;
+        height: 80px;
+        background: #5865f2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 32px;
+        font-weight: 600;
+    }
+    
+    .join-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    #inviteSubmitBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 `
 document.head.appendChild(style)
