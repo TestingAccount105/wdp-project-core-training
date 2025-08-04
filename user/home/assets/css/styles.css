@@ -585,6 +585,8 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    height: 100vh; /* Ensure full height */
+    overflow: hidden; /* Prevent overflow */
 }
 
 .chat-header {
@@ -636,6 +638,25 @@ body {
     padding: 16px;
     overflow-y: auto;
     scroll-behavior: smooth;
+    min-height: 0; /* Ensure flex child can shrink */
+}
+
+/* Custom scrollbar for chat messages */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: var(--scrollbar-thin-track);
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thin-thumb);
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-auto-thumb);
 }
 
 /* Message Bubbles */
@@ -748,6 +769,26 @@ body {
     font-size: 14px;
     color: var(--text-muted);
     font-style: italic;
+}
+
+/* Loading and Error States */
+.loading-state, .error-state, .empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.loading-state p:before {
+    content: "⚡ ";
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* Message Input */

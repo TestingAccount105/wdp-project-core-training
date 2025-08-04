@@ -59,7 +59,7 @@ switch ($method) {
 function get_conversations($user_id) {
     global $mysqli;
     
-    $query = "SELECT cr.ID, cr.Type, cr.Name, cr.ImageUrl,
+    $query = "SELECT DISTINCT cr.ID, cr.Type, cr.Name, cr.ImageUrl,
                      (SELECT m.Content FROM ChatRoomMessage crm 
                       INNER JOIN Message m ON crm.MessageID = m.ID 
                       WHERE crm.RoomID = cr.ID 
@@ -76,11 +76,27 @@ function get_conversations($user_id) {
                       )) as unread_count
               FROM ChatRoom cr
               INNER JOIN ChatParticipants cp ON cr.ID = cp.ChatRoomID
-              WHERE cp.UserID = ?
+              WHERE cp.UserID = ? 
+              AND (
+                  cr.Type = 'group' 
+                  OR (
+                      cr.Type = 'direct' 
+                      AND EXISTS (
+                          SELECT 1 FROM ChatParticipants cp2 
+                          INNER JOIN FriendsList f ON (
+                              (f.UserID1 = ? AND f.UserID2 = cp2.UserID) 
+                              OR (f.UserID1 = cp2.UserID AND f.UserID2 = ?)
+                          )
+                          WHERE cp2.ChatRoomID = cr.ID 
+                          AND cp2.UserID != ? 
+                          AND f.Status = 'accepted'
+                      )
+                  )
+              )
               ORDER BY last_message_time DESC";
     
     $stmt = $mysqli->prepare($query);
-    $stmt->bind_param("ii", $user_id, $user_id);
+    $stmt->bind_param("iiiiii", $user_id, $user_id, $user_id, $user_id, $user_id, $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     
@@ -286,7 +302,7 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
         }
     }
     
-    // Verify all users are friends with the current user
+    // Verify all users are friends with the current user (STRICT CHECK)
     foreach ($user_ids as $target_user_id) {
         $friend_query = "SELECT 1 FROM FriendsList WHERE 
                          ((UserID1 = ? AND UserID2 = ?) OR (UserID1 = ? AND UserID2 = ?)) 
@@ -294,8 +310,11 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
         $stmt = $mysqli->prepare($friend_query);
         $stmt->bind_param("iiii", $user_id, $target_user_id, $target_user_id, $user_id);
         $stmt->execute();
-        if (!$stmt->get_result()->fetch_assoc()) {
-            send_response(['error' => 'Can only create DM with friends'], 400);
+        $result = $stmt->get_result();
+        if (!$result->fetch_assoc()) {
+            error_log("Friend check failed: User $user_id is not friends with user $target_user_id");
+            send_response(['error' => 'Can only create DM with friends. Please add them as a friend first.'], 400);
+            return;
         }
     }
     
@@ -530,4 +549,4 @@ function react_to_message($user_id, $message_id, $emoji) {
     }
 }
 
-?>
+?>}

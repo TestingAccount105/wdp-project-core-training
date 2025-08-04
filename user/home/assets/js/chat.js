@@ -166,16 +166,27 @@ class ChatManager {
 
     async loadMessages(roomId) {
         try {
+            // Show loading state
+            const container = document.getElementById('chatMessages');
+            if (container) {
+                container.innerHTML = '<div class="loading-state"><p>Loading messages...</p></div>';
+            }
+            
             const response = await fetch(`/user/home/api/chat.php?action=messages&room_id=${roomId}`);
             const data = await response.json();
             
             if (data.messages) {
                 this.messages = data.messages;
                 this.renderMessages(data.messages);
-                this.scrollToBottom();
+                // Ensure we scroll to bottom after loading messages
+                setTimeout(() => this.scrollToBottom(), 100);
             }
         } catch (error) {
             console.error('Error loading messages:', error);
+            const container = document.getElementById('chatMessages');
+            if (container) {
+                container.innerHTML = '<div class="error-state"><p>Failed to load messages. Please try again.</p></div>';
+            }
         }
     }
 
@@ -702,7 +713,10 @@ class ChatManager {
         this.scrollToBottom();
         
         // Also update the conversation list to show the latest message
-        this.loadConversations();
+        // Use a small delay to ensure the database is updated
+        setTimeout(() => {
+            this.loadConversations();
+        }, 100);
     }
 
     updateMessage(message) {
@@ -820,7 +834,10 @@ class ChatManager {
     scrollToBottom() {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Use requestAnimationFrame to ensure DOM is updated
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
         }
     }
 
@@ -968,8 +985,13 @@ class ChatManager {
 
             if (data.room_id) {
                 this.hideCreateDMModal();
-                this.loadConversations(); // Refresh conversation list
-                this.openChat(data.room_id); // Open the new chat
+                
+                // Wait a bit for the conversation to be fully created in the database
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Refresh conversation list and open the new chat
+                await this.loadConversations();
+                await this.openChat(data.room_id);
             } else {
                 alert(data.error || 'Failed to create conversation');
             }
