@@ -147,6 +147,17 @@ function initializeEventListeners() {
   })
 }
 
+function isAtPageBottom() {
+  return (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 1);
+}
+
+window.addEventListener('scroll', () => {
+  if (isAtPageBottom()) {
+    console.log("User is at the bottom of the page.");
+    duplicateServers();
+  }
+});
+
 // Load categories
 function loadCategories() {
   $.ajax({
@@ -359,6 +370,28 @@ function loadServers(showLoading = false) {
   })
 }
 
+// Create skeleton server card for loading state
+function createSkeletonCard() {
+  return $(`
+    <div class="skeleton-server-card">
+      <div class="skeleton-banner"></div>
+      <div class="skeleton-header">
+        <div class="skeleton-icon"></div>
+        <div class="skeleton-text">
+          <div class="skeleton-title"></div>
+          <div class="skeleton-description"></div>
+          <div class="skeleton-category"></div>
+        </div>
+      </div>
+      <div class="skeleton-meta">
+        <div class="skeleton-meta-item"></div>
+        <div class="skeleton-meta-item"></div>
+      </div>
+      <div class="skeleton-button"></div>
+    </div>
+  `)
+}
+
 // New function to duplicate servers for infinite scrolling
 function duplicateServers() {
   if (allServersFromDB.length === 0) {
@@ -374,38 +407,57 @@ function duplicateServers() {
   
   // Create a batch of servers to display (12 servers per "page")
   const serversPerPage = 12
-  let serversToShow = []
+  const serversGrid = $("#serversGrid")
   
-  // Create enough servers for this "page" by cycling through available servers
+  // First, show skeleton cards
+  console.log("Showing skeleton loading cards...")
+  const skeletonCards = []
   for (let i = 0; i < serversPerPage; i++) {
-    // Use a different counter for cycling through servers
-    const cycleIndex = (displayedServersCount + i) % allServersFromDB.length
-    const sourceServer = allServersFromDB[cycleIndex]
-    
-    console.log(`Duplicating server ${cycleIndex}: ${sourceServer.Name}`)
-    
-    // Create a copy of the server with a unique ID for display
-    const duplicatedServer = {
-      ...sourceServer,
-      ID: `${sourceServer.ID}_dup_${displayedServersCount + i}`, // Unique display ID
-      originalID: sourceServer.ID // Keep original ID for join functionality
-    }
-    
-    serversToShow.push(duplicatedServer)
+    const skeletonCard = createSkeletonCard()
+    skeletonCards.push(skeletonCard)
+    serversGrid.append(skeletonCard)
   }
   
-  // Update the displayed count after creating all duplicates
-  displayedServersCount += serversPerPage
-  
-  console.log("✅ Showing duplicated servers:", serversToShow.length)
-  console.log("New displayed count:", displayedServersCount)
-  displayServers(serversToShow)
-  
-  // Increment page for next duplication
-  currentPage++
-  updateServerCount()
-  
-  console.log("🔄 === END DUPLICATION DEBUG ===")
+  // After 2 seconds, replace skeleton cards with actual server cards
+  setTimeout(() => {
+    console.log("Replacing skeleton cards with actual server cards...")
+    
+    // Remove skeleton cards
+    skeletonCards.forEach(card => card.remove())
+    
+    let serversToShow = []
+    
+    // Create enough servers for this "page" by cycling through available servers
+    for (let i = 0; i < serversPerPage; i++) {
+      // Use a different counter for cycling through servers
+      const cycleIndex = (displayedServersCount + i) % allServersFromDB.length
+      const sourceServer = allServersFromDB[cycleIndex]
+      
+      console.log(`Duplicating server ${cycleIndex}: ${sourceServer.Name}`)
+      
+      // Create a copy of the server with a unique ID for display
+      const duplicatedServer = {
+        ...sourceServer,
+        ID: `${sourceServer.ID}_dup_${displayedServersCount + i}`, // Unique display ID
+        originalID: sourceServer.ID // Keep original ID for join functionality
+      }
+      
+      serversToShow.push(duplicatedServer)
+    }
+    
+    // Update the displayed count after creating all duplicates
+    displayedServersCount += serversPerPage
+    
+    console.log("✅ Showing duplicated servers:", serversToShow.length)
+    console.log("New displayed count:", displayedServersCount)
+    displayServers(serversToShow)
+    
+    // Increment page for next duplication
+    currentPage++
+    updateServerCount()
+    
+    console.log("🔄 === END DUPLICATION DEBUG ===")
+  }, 2000) // 2 second delay
 }
 
 // Display servers
@@ -938,6 +990,93 @@ style.textContent = `
         border-radius: 50%;
         opacity: 0.3;
         z-index: 1;
+    }
+    
+    /* Skeleton loading styles */
+    .skeleton-server-card {
+        background: #2f3136;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        animation: skeletonPulse 1.5s ease-in-out infinite alternate;
+    }
+    
+    .skeleton-banner {
+        width: 100%;
+        height: 120px;
+        background: #36393f;
+        border-radius: 6px;
+        margin-bottom: 12px;
+    }
+    
+    .skeleton-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    
+    .skeleton-icon {
+        width: 50px;
+        height: 50px;
+        background: #36393f;
+        border-radius: 50%;
+        margin-right: 12px;
+    }
+    
+    .skeleton-text {
+        flex: 1;
+    }
+    
+    .skeleton-title {
+        width: 60%;
+        height: 20px;
+        background: #36393f;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .skeleton-description {
+        width: 80%;
+        height: 14px;
+        background: #36393f;
+        border-radius: 4px;
+        margin-bottom: 6px;
+    }
+    
+    .skeleton-category {
+        width: 40%;
+        height: 12px;
+        background: #36393f;
+        border-radius: 4px;
+    }
+    
+    .skeleton-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    
+    .skeleton-meta-item {
+        width: 30%;
+        height: 12px;
+        background: #36393f;
+        border-radius: 4px;
+    }
+    
+    .skeleton-button {
+        width: 100%;
+        height: 36px;
+        background: #36393f;
+        border-radius: 6px;
+    }
+    
+    @keyframes skeletonPulse {
+        0% {
+            opacity: 0.6;
+        }
+        100% {
+            opacity: 0.9;
+        }
     }
 `
 document.head.appendChild(style)
