@@ -1,42 +1,82 @@
 <?php
+// Disable error display to prevent HTML output
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+// Start output buffering to capture any unexpected output
+ob_start();
+
+// Start session first, before any output
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once 'config.php';
 
+// Clean any previous output
+if (ob_get_level()) {
+    ob_clean();
+}
+
+// Set content type to JSON from the start
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+    header('Cache-Control: no-cache, must-revalidate');
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
-$user_id = validate_session();
+
+// Debug logging
+error_log("Upload.php called - Method: " . $method);
+error_log("Files present: " . (isset($_FILES['files']) ? 'YES' : 'NO'));
+error_log("Session user_id: " . (isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'NOT SET'));
+
+try {
+    $user_id = validate_session();
+} catch (Exception $e) {
+    send_response(['error' => 'Session validation failed: ' . $e->getMessage()], 401);
+    exit;
+}
 
 // Check if files were uploaded
-if ($method !== 'POST' || !isset($_FILES['files'])) {
+if ($method !== 'POST' || (!isset($_FILES['files']) && !isset($_FILES['files']))) {
     send_response(['error' => 'No files uploaded'], 400);
 }
 
-// Configuration
-$upload_dir = '../uploads/';
-$max_file_size = 50 * 1024 * 1024; // 50MB
-$allowed_types = [
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-    'video/mp4', 'video/webm', 'video/ogg',
-    'audio/mp3', 'audio/wav', 'audio/ogg',
-    'application/pdf', 'text/plain',
-    'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-];
+try {
+    // Configuration
+    $upload_dir = '../uploads/';
+    $max_file_size = 50 * 1024 * 1024; // 50MB
+    $allowed_types = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/ogg',
+        'audio/mp3', 'audio/wav', 'audio/ogg',
+        'application/pdf', 'text/plain',
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
 
-// Create upload directory if it doesn't exist
-if (!file_exists($upload_dir)) {
-    mkdir($upload_dir, 0755, true);
-}
+    // Create upload directory if it doesn't exist
+    if (!file_exists($upload_dir)) {
+        if (!mkdir($upload_dir, 0755, true)) {
+            throw new Exception('Failed to create upload directory');
+        }
+    }
 
-// Create user-specific directory
-$user_upload_dir = $upload_dir . $user_id . '/';
-if (!file_exists($user_upload_dir)) {
-    mkdir($user_upload_dir, 0755, true);
-}
+    // Create user-specific directory
+    $user_upload_dir = $upload_dir . $user_id . '/';
+    if (!file_exists($user_upload_dir)) {
+        if (!mkdir($user_upload_dir, 0755, true)) {
+            throw new Exception('Failed to create user upload directory');
+        }
+    }
 
 $uploaded_files = [];
 $errors = [];
 
-// Handle multiple files
-$files = $_FILES['files'];
+// Handle multiple files - check for both 'files' and array format
+$files = isset($_FILES['files']) ? $_FILES['files'] : null;
 $file_count = is_array($files['name']) ? count($files['name']) : 1;
 
 for ($i = 0; $i < $file_count; $i++) {
@@ -113,6 +153,11 @@ if (!empty($errors)) {
 }
 
 send_response($response);
+
+} catch (Exception $e) {
+    error_log("Upload error: " . $e->getMessage());
+    send_response(['error' => 'Upload failed: ' . $e->getMessage()], 500);
+}
 
 // Helper functions
 function generateUniqueFileName($original_name, $extension) {

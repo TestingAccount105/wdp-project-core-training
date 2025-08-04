@@ -1483,7 +1483,21 @@ class ChatManager {
                 body: formData
             });
 
-            const data = await response.json();
+            // Log response details for debugging
+            console.log('Upload response status:', response.status);
+            console.log('Upload response headers:', [...response.headers.entries()]);
+            
+            const responseText = await response.text();
+            console.log('Upload response text:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.error('Response text that failed to parse:', responseText.substring(0, 500));
+                throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 100));
+            }
 
             if (data.uploaded_files && data.uploaded_files.length > 0) {
                 // Return the first file URL for now
