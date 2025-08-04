@@ -576,10 +576,10 @@ function get_message_reactions($message_id) {
                      GROUP_CONCAT(u.DisplayName) as users,
                      MAX(CASE WHEN mr.UserID = ? THEN 1 ELSE 0 END) as user_reacted
               FROM MessageReaction mr 
-              JOIN User u ON mr.UserID = u.ID 
+              JOIN Users u ON mr.UserID = u.ID 
               WHERE mr.MessageID = ? 
-              GROUP BY mr.Emoji 
-              ORDER BY MIN(mr.CreatedAt)";
+              GROUP BY mr.Emoji;
+            --   ORDER BY MIN(mr.CreatedAt)";
     
     $stmt = $mysqli->prepare($query);
     $stmt->bind_param("ii", $current_user_id, $message_id);
