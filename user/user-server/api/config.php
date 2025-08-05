@@ -133,3 +133,4 @@ $server_categories = [
     'Books & Literature', 'Sports', 'Business', 'Cryptocurrency', 'Other'
 ];
 ?>
+
