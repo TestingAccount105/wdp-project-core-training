@@ -80,6 +80,7 @@ switch ($method) {
                     create_direct_message($user_id, $data['user_ids'], $data['group_name'] ?? null);
                     break;
                 case 'send_message':
+                    error_log("Send message data: " . json_encode($data));
                     send_message($user_id, $data['room_id'], $data['content'], $data['reply_to'] ?? null, $data['attachment_url'] ?? null);
                     break;
                 case 'edit_message':
@@ -524,6 +525,7 @@ function send_message($user_id, $room_id, $content, $reply_to = null, $attachmen
                 'sent_at' => $message_data['SentAt'],
                 'edited_at' => $message_data['EditedAt'],
                 'message_type' => $message_data['MessageType'],
+                'attachment_url' => $message_data['AttachmentURL'],
                 'reply_to' => $reply_to,
                 'reactions' => []
             ]

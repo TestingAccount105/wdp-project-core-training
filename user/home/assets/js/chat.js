@@ -494,6 +494,7 @@ class ChatManager {
         let attachmentUrl = null;
         if (this.selectedFiles.length > 0) {
             attachmentUrl = await this.uploadFiles();
+            console.log('Upload result:', attachmentUrl);
             if (!attachmentUrl) {
                 console.error('File upload failed');
                 return;
@@ -506,6 +507,8 @@ class ChatManager {
             reply_to: this.replyingTo,
             attachment_url: attachmentUrl
         };
+        
+        console.log('Sending message with data:', messageData);
 
         if (this.editingMessageId) {
             // Edit message
@@ -1537,7 +1540,9 @@ class ChatManager {
             if (data.uploaded_files && data.uploaded_files.length > 0) {
                 // Return the first file URL for now
                 // In a more advanced implementation, you might handle multiple files differently
-                return data.uploaded_files[0].url;
+                const fileUrl = data.uploaded_files[0].url;
+                console.log('Upload successful, returning URL:', fileUrl);
+                return fileUrl;
             } else {
                 console.error('Upload failed:', data.errors || 'Unknown error');
                 return null;

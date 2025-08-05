@@ -1,0 +1,10 @@
+Ruangan A = 67
+Ruangan B = 36
+Ruangan C = 3
+
+Step 1: Urutkan ruangannya berdasarkan yang paling banyak host
+A B C
+
+Step 2 cari subnet masknya
+- Ruangan A (67)
+	2^h - 2 >= 67

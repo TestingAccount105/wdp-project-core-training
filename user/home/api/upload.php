@@ -129,23 +129,15 @@ for ($i = 0; $i < $file_count; $i++) {
 
     // Move uploaded file
     if (move_uploaded_file($file_tmp, $file_path)) {
-        // Store file info in database
+        // Just return the file URL, don't store in database yet
         $file_url = '/user/home/uploads/' . $user_id . '/' . $unique_name;
-        $file_id = storeFileInfo($user_id, $file_name, $unique_name, $file_url, $file_size, $detected_type);
         
-        if ($file_id) {
-            $uploaded_files[] = [
-                'id' => $file_id,
-                'name' => $file_name,
-                'url' => $file_url,
-                'size' => $file_size,
-                'type' => $detected_type,
-                'thumbnail' => generateThumbnail($file_path, $detected_type, $user_id)
-            ];
-        } else {
-            $errors[] = "Failed to store file info for {$file_name}";
-            unlink($file_path); // Remove uploaded file if database insert failed
-        }
+        $uploaded_files[] = [
+            'name' => $file_name,
+            'url' => $file_url,
+            'size' => $file_size,
+            'type' => $detected_type
+        ];
     } else {
         $errors[] = "Failed to move uploaded file {$file_name}";
     }
