@@ -80,7 +80,7 @@ switch ($method) {
                     create_direct_message($user_id, $data['user_ids'], $data['group_name'] ?? null);
                     break;
                 case 'send_message':
-                    send_message($user_id, $data['room_id'], $data['content'], $data['reply_to'] ?? null);
+                    send_message($user_id, $data['room_id'], $data['content'], $data['reply_to'] ?? null, $data['attachment_url'] ?? null);
                     break;
                 case 'edit_message':
                     edit_message($user_id, $data['message_id'], $data['content']);
@@ -457,10 +457,10 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
     }
 }
 
-function send_message($user_id, $room_id, $content, $reply_to = null) {
+function send_message($user_id, $room_id, $content, $reply_to = null, $attachment_url = null) {
     global $mysqli;
     
-    error_log("send_message called with user_id=$user_id, room_id=$room_id, content=$content, reply_to=$reply_to");
+    error_log("send_message called with user_id=$user_id, room_id=$room_id, content=$content, reply_to=$reply_to, attachment_url=$attachment_url");
     
     // Verify user is participant in this room
     $access_query = "SELECT 1 FROM ChatParticipants WHERE ChatRoomID = ? AND UserID = ?";
@@ -472,19 +472,19 @@ function send_message($user_id, $room_id, $content, $reply_to = null) {
         send_response(['error' => 'Access denied'], 403);
     }
     
-    if (empty(trim($content))) {
-        error_log("Empty message content");
-        send_response(['error' => 'Message content required'], 400);
+    if (empty(trim($content)) && empty($attachment_url)) {
+        error_log("Empty message content and no attachment");
+        send_response(['error' => 'Message content or attachment required'], 400);
     }
     
     $mysqli->begin_transaction();
     
     try {
         // Create message
-        $insert_message_query = "INSERT INTO Message (UserID, Content, SentAt, MessageType, ReplyMessageID) 
-                                VALUES (?, ?, NOW(), 'text', ?)";
+        $insert_message_query = "INSERT INTO Message (UserID, Content, SentAt, MessageType, ReplyMessageID, AttachmentURL) 
+                                VALUES (?, ?, NOW(), 'text', ?, ?)";
         $stmt = $mysqli->prepare($insert_message_query);
-        $stmt->bind_param("isi", $user_id, $content, $reply_to);
+        $stmt->bind_param("isis", $user_id, $content, $reply_to, $attachment_url);
         $stmt->execute();
         $message_id = $mysqli->insert_id;
         

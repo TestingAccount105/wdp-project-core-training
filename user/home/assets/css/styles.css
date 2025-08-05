@@ -740,6 +740,69 @@ body {
     color: var(--interactive-hover);
 }
 
+/* Message Attachments */
+.message-attachment {
+    margin: 8px 0;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    max-width: 400px;
+}
+
+.image-attachment {
+    border: 1px solid var(--bg-tertiary);
+}
+
+.attached-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+.file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--bg-secondary);
+}
+
+.attachment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius-small);
+    color: var(--interactive-normal);
+}
+
+.attachment-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.attachment-name {
+    display: block;
+    font-weight: 500;
+    color: var(--text-link);
+    text-decoration: none;
+    word-break: break-all;
+    margin-bottom: 2px;
+}
+
+.attachment-name:hover {
+    text-decoration: underline;
+}
+
+.attachment-type {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
 /* Reply Messages */
 .reply-reference {
     margin-left: 48px;

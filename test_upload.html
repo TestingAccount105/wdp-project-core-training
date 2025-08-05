@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Test</title>
+</head>
+<body>
+    <h1>Upload Test</h1>
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept="image/*,text/*">
+        <button type="submit">Upload Test</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('Please select a file');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('files[]', file);
+        
+        try {
+            const response = await fetch('/user/home/api/upload.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.text();
+            document.getElementById('result').innerHTML = '<pre>' + result + '</pre>';
+            
+            // Try to parse as JSON
+            try {
+                const data = JSON.parse(result);
+                console.log('Upload result:', data);
+                
+                if (data.uploaded_files && data.uploaded_files.length > 0) {
+                    const fileUrl = data.uploaded_files[0].url;
+                    document.getElementById('result').innerHTML += 
+                        '<br><p>File uploaded successfully!</p>' +
+                        '<p>URL: <a href="' + fileUrl + '" target="_blank">' + fileUrl + '</a></p>';
+                }
+            } catch (e) {
+                console.error('Not valid JSON:', e);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            document.getElementById('result').innerHTML = 'Error: ' + error.message;
+        }
+    });
+    </script>
+</body>
+</html>

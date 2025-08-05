@@ -330,6 +330,7 @@ class ChatManager {
                 ${message.reply_to ? this.renderReplyReference(message.reply_to) : ''}
                 <div class="message-content">
                     ${this.processMessageContent(message.content)}
+                    ${message.attachment_url ? this.renderAttachment(message.attachment_url) : ''}
                     ${message.edited_at ? '<span class="edited-indicator">(edited)</span>' : ''}
                 </div>
                 ${message.reactions.length > 0 ? this.renderMessageReactions(message.reactions) : ''}
@@ -351,6 +352,40 @@ class ChatManager {
                             <i class="fas fa-trash"></i>
                         </button>
                     ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    renderAttachment(attachmentUrl) {
+        if (!attachmentUrl) return '';
+        
+        const fileName = attachmentUrl.split('/').pop();
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        // Check if it's an image
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+            return `
+                <div class="message-attachment image-attachment">
+                    <img src="${attachmentUrl}" alt="${fileName}" class="attached-image" 
+                         onclick="this.style.transform = this.style.transform ? '' : 'scale(1.5)'; this.style.zIndex = this.style.zIndex ? '' : '1000';"
+                         style="max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer; transition: transform 0.3s ease;">
+                    <div class="attachment-info">
+                        <span class="attachment-name">${fileName}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // For other file types, show a download link
+        return `
+            <div class="message-attachment file-attachment">
+                <div class="attachment-icon">
+                    <i class="fas fa-file"></i>
+                </div>
+                <div class="attachment-info">
+                    <a href="${attachmentUrl}" target="_blank" class="attachment-name">${fileName}</a>
+                    <span class="attachment-type">${fileExtension.toUpperCase()} file</span>
                 </div>
             </div>
         `;

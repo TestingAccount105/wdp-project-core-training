@@ -30,17 +30,17 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Debug logging
 error_log("Upload.php called - Method: " . $method);
 error_log("Files present: " . (isset($_FILES['files']) ? 'YES' : 'NO'));
-error_log("Session user_id: " . (isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'NOT SET'));
 
 try {
     $user_id = validate_session();
 } catch (Exception $e) {
+    error_log("Session validation failed: " . $e->getMessage());
     send_response(['error' => 'Session validation failed: ' . $e->getMessage()], 401);
     exit;
 }
 
 // Check if files were uploaded
-if ($method !== 'POST' || (!isset($_FILES['files']) && !isset($_FILES['files']))) {
+if ($method !== 'POST' || !isset($_FILES['files'])) {
     send_response(['error' => 'No files uploaded'], 400);
 }
 
@@ -77,6 +77,11 @@ $errors = [];
 
 // Handle multiple files - check for both 'files' and array format
 $files = isset($_FILES['files']) ? $_FILES['files'] : null;
+
+if (!$files) {
+    send_response(['error' => 'No files data received'], 400);
+}
+
 $file_count = is_array($files['name']) ? count($files['name']) : 1;
 
 for ($i = 0; $i < $file_count; $i++) {
@@ -195,34 +200,53 @@ function storeFileInfo($user_id, $original_name, $stored_name, $file_url, $file_
 }
 
 function generateThumbnail($file_path, $file_type, $user_id) {
-    if (!str_starts_with($file_type, 'image/')) {
+    // Skip thumbnail generation if not an image
+    if (strpos($file_type, 'image/') !== 0) {
         return null;
     }
     
-    $thumbnail_dir = '../uploads/' . $user_id . '/thumbnails/';
-    if (!file_exists($thumbnail_dir)) {
-        mkdir($thumbnail_dir, 0755, true);
+    // Skip thumbnail generation if GD extension is not available
+    if (!extension_loaded('gd')) {
+        error_log("GD extension not available, skipping thumbnail generation");
+        return null;
     }
     
-    $file_name = pathinfo($file_path, PATHINFO_FILENAME);
-    $thumbnail_path = $thumbnail_dir . $file_name . '_thumb.jpg';
-    $thumbnail_url = '/user/home/uploads/' . $user_id . '/thumbnails/' . $file_name . '_thumb.jpg';
-    
-    // Create thumbnail
-    if (createImageThumbnail($file_path, $thumbnail_path, 200, 200)) {
-        return $thumbnail_url;
+    try {
+        $thumbnail_dir = '../uploads/' . $user_id . '/thumbnails/';
+        if (!file_exists($thumbnail_dir)) {
+            mkdir($thumbnail_dir, 0755, true);
+        }
+        
+        $file_name = pathinfo($file_path, PATHINFO_FILENAME);
+        $thumbnail_path = $thumbnail_dir . $file_name . '_thumb.jpg';
+        $thumbnail_url = '/user/home/uploads/' . $user_id . '/thumbnails/' . $file_name . '_thumb.jpg';
+        
+        // Create thumbnail
+        if (createImageThumbnail($file_path, $thumbnail_path, 200, 200)) {
+            return $thumbnail_url;
+        }
+    } catch (Exception $e) {
+        error_log("Thumbnail generation failed: " . $e->getMessage());
     }
     
     return null;
 }
 
 function createImageThumbnail($source_path, $thumbnail_path, $max_width, $max_height) {
-    $image_info = getimagesize($source_path);
-    if (!$image_info) {
-        return false;
-    }
-    
-    $mime_type = $image_info['mime'];
+    try {
+        // Check if GD extension is loaded
+        if (!extension_loaded('gd')) {
+            error_log("GD extension is not loaded");
+            return false;
+        }
+        
+        $image_info = getimagesize($source_path);
+        if (!$image_info) {
+            error_log("Could not get image info for: " . $source_path);
+            return false;
+        }
+        
+        $mime_type = $image_info['mime'];
     
     // Create image resource from source
     switch ($mime_type) {
@@ -281,6 +305,11 @@ function createImageThumbnail($source_path, $thumbnail_path, $max_width, $max_he
     imagedestroy($thumbnail_image);
     
     return $result;
+    
+    } catch (Exception $e) {
+        error_log("Image thumbnail creation error: " . $e->getMessage());
+        return false;
+    }
 }
 
 function get_upload_error_message($error_code) {
@@ -312,5 +341,11 @@ function format_bytes($bytes, $precision = 2) {
     }
     
     return round($bytes, $precision) . ' ' . $units[$i];
+}
+
+// Safety fallback - if we somehow reach here without sending a response
+if (!headers_sent()) {
+    error_log("Upload.php reached end without sending response - this should not happen");
+    send_response(['error' => 'Unexpected server error'], 500);
 }
 ?>
