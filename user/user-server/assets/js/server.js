@@ -695,6 +695,123 @@ function openCreateServerModal() {
     serverApp.openCreateServerModal();
 }
 
+function closeCreateServerModal() {
+    $('#createServerModal').addClass('hidden');
+}
+
+function createServer() {
+    // Get form data and submit
+    const form = document.getElementById('createServerForm');
+    const formData = new FormData(form);
+    
+    // Add action
+    formData.append('action', 'createServer');
+    
+    fetch('/user/user-server/api/servers.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            serverApp.showToast('Server created successfully!', 'success');
+            closeCreateServerModal();
+            serverApp.loadUserServers();
+            form.reset();
+        } else {
+            serverApp.showToast(data.error || 'Failed to create server', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating server:', error);
+        serverApp.showToast('Failed to create server', 'error');
+    });
+}
+
+function closeCropperModal() {
+    $('#imageCropperModal').addClass('hidden');
+}
+
+function applyCrop() {
+    // Apply crop functionality would go here
+    // For now, just close the modal
+    closeCropperModal();
+}
+
+// Modal functions for confirmation modal
+function closeConfirmationModal() {
+    $('#confirmationModal').addClass('hidden');
+}
+
+function executeConfirmationAction() {
+    // This function should be customized based on what action is being confirmed
+    // For now, just close the modal
+    closeConfirmationModal();
+}
+
+// Modal functions for leave server modal
+function closeLeaveServerModal() {
+    $('#leaveServerModal').addClass('hidden');
+}
+
+function leaveServer() {
+    if (!serverApp.currentServer) return;
+    
+    // Call the server API to leave the server
+    fetch('/user/user-server/api/servers.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=leaveServer&serverId=${serverApp.currentServer.ID}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            serverApp.showToast('Left server successfully', 'success');
+            closeLeaveServerModal();
+            serverApp.loadUserServers();
+            // Redirect to home or select another server
+            window.location.href = '/user/home/';
+        } else {
+            serverApp.showToast(data.error || 'Failed to leave server', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error leaving server:', error);
+        serverApp.showToast('Failed to leave server', 'error');
+    });
+}
+
+function deleteServerFromLeave() {
+    if (!serverApp.currentServer) return;
+    
+    // Call the server API to delete the server
+    fetch('/user/user-server/api/servers.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=deleteServer&serverId=${serverApp.currentServer.ID}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            serverApp.showToast('Server deleted successfully', 'success');
+            closeLeaveServerModal();
+            serverApp.loadUserServers();
+            // Redirect to home
+            window.location.href = '/user/home/';
+        } else {
+            serverApp.showToast(data.error || 'Failed to delete server', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting server:', error);
+        serverApp.showToast('Failed to delete server', 'error');
+    });
+}
+
 // Initialize the application
 let serverApp;
 
@@ -704,3 +821,533 @@ $(document).ready(() => {
 
 // Export for use in other files
 window.serverApp = serverApp;
+
+// Additional Modal Functions
+
+// Close user settings modal
+function closeUserSettingsModal() {
+    document.getElementById('userSettingsModal').classList.add('hidden');
+}
+
+// Channel Management Functions
+function closeCreateChannelModal() {
+    document.getElementById('createChannelModal').classList.add('hidden');
+}
+
+function createChannel() {
+    // Get form data
+    const channelName = document.getElementById('channelName').value.trim();
+    const channelType = document.querySelector('input[name="channelType"]:checked').value;
+    const channelDescription = document.getElementById('channelDescription').value.trim();
+    
+    if (!channelName) {
+        alert('Channel name is required');
+        return;
+    }
+    
+    // Create FormData
+    const formData = new FormData();
+    formData.append('action', 'create_channel');
+    formData.append('name', channelName);
+    formData.append('type', channelType);
+    formData.append('description', channelDescription);
+    formData.append('server_id', currentServerId);
+    
+    fetch('api/channel.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeCreateChannelModal();
+            // Refresh channel list
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to create channel');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating channel:', error);
+        alert('Failed to create channel');
+    });
+}
+
+// Invite People Functions
+function closeInvitePeopleModal() {
+    document.getElementById('invitePeopleModal').classList.add('hidden');
+}
+
+function copyInviteLink() {
+    const inviteLink = document.getElementById('inviteLink');
+    inviteLink.select();
+    document.execCommand('copy');
+    
+    const copyBtn = document.getElementById('copyInviteBtn');
+    const originalText = copyBtn.innerHTML;
+    copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+    setTimeout(() => {
+        copyBtn.innerHTML = originalText;
+    }, 2000);
+}
+
+function regenerateInviteLink() {
+    const formData = new FormData();
+    formData.append('action', 'regenerate_invite');
+    formData.append('server_id', currentServerId);
+    
+    fetch('api/invite.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('inviteLink').value = data.invite_link;
+        } else {
+            alert(data.message || 'Failed to regenerate invite link');
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating invite:', error);
+        alert('Failed to regenerate invite link');
+    });
+}
+
+function inviteTitibot() {
+    const formData = new FormData();
+    formData.append('action', 'invite_titibot');
+    formData.append('server_id', currentServerId);
+    
+    fetch('api/invite.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Titibot has been invited to the server!');
+        } else {
+            alert(data.message || 'Failed to invite Titibot');
+        }
+    })
+    .catch(error => {
+        console.error('Error inviting Titibot:', error);
+        alert('Failed to invite Titibot');
+    });
+}
+
+function acceptInvite() {
+    const inviteCode = new URLSearchParams(window.location.search).get('invite');
+    if (!inviteCode) return;
+    
+    const formData = new FormData();
+    formData.append('action', 'accept_invite');
+    formData.append('invite_code', inviteCode);
+    
+    fetch('api/invite.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = 'server.php?id=' + data.server_id;
+        } else {
+            alert(data.message || 'Failed to accept invite');
+        }
+    })
+    .catch(error => {
+        console.error('Error accepting invite:', error);
+        alert('Failed to accept invite');
+    });
+}
+
+function declineInvite() {
+    window.location.href = 'dashboard.php';
+}
+
+// Server Settings Functions
+function closeServerSettingsModal() {
+    document.getElementById('serverSettingsModal').classList.add('hidden');
+}
+
+function editServerBanner() {
+    document.getElementById('serverBannerInput').click();
+}
+
+function editServerIcon() {
+    document.getElementById('serverIconInput').click();
+}
+
+function saveServerName() {
+    const serverName = document.getElementById('serverNameInput').value.trim();
+    if (!serverName) {
+        alert('Server name is required');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'update_server_name');
+    formData.append('server_id', currentServerId);
+    formData.append('name', serverName);
+    
+    fetch('api/server.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update server name');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating server name:', error);
+        alert('Failed to update server name');
+    });
+}
+
+function saveServerDescription() {
+    const serverDescription = document.getElementById('serverDescriptionInput').value.trim();
+    
+    const formData = new FormData();
+    formData.append('action', 'update_server_description');
+    formData.append('server_id', currentServerId);
+    formData.append('description', serverDescription);
+    
+    fetch('api/server.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update server description');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating server description:', error);
+        alert('Failed to update server description');
+    });
+}
+
+function saveServerCategory() {
+    const serverCategory = document.getElementById('serverCategorySelect').value;
+    
+    const formData = new FormData();
+    formData.append('action', 'update_server_category');
+    formData.append('server_id', currentServerId);
+    formData.append('category', serverCategory);
+    
+    fetch('api/server.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update server category');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating server category:', error);
+        alert('Failed to update server category');
+    });
+}
+
+function deleteServer() {
+    const confirmText = document.getElementById('deleteServerConfirm').value;
+    const expectedText = document.getElementById('deleteServerConfirm').getAttribute('data-server-name');
+    
+    if (confirmText !== expectedText) {
+        alert('Server name does not match');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'delete_server');
+    formData.append('server_id', currentServerId);
+    
+    fetch('api/server.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = 'dashboard.php';
+        } else {
+            alert(data.message || 'Failed to delete server');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting server:', error);
+        alert('Failed to delete server');
+    });
+}
+
+// Channel Edit Functions
+function closeEditChannelModal() {
+    document.getElementById('editChannelModal').classList.add('hidden');
+}
+
+function saveChannelEdit() {
+    const channelId = document.getElementById('editChannelId').value;
+    const channelName = document.getElementById('editChannelName').value.trim();
+    const channelDescription = document.getElementById('editChannelDescription').value.trim();
+    
+    if (!channelName) {
+        alert('Channel name is required');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'update_channel');
+    formData.append('channel_id', channelId);
+    formData.append('name', channelName);
+    formData.append('description', channelDescription);
+    
+    fetch('api/channel.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeEditChannelModal();
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update channel');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating channel:', error);
+        alert('Failed to update channel');
+    });
+}
+
+// Transfer Ownership Functions
+function closeTransferOwnershipModal() {
+    document.getElementById('transferOwnershipModal').classList.add('hidden');
+}
+
+function confirmOwnershipTransfer() {
+    const memberId = document.getElementById('transferMemberSelect').value;
+    if (!memberId) {
+        alert('Please select a member');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'transfer_ownership');
+    formData.append('server_id', currentServerId);
+    formData.append('new_owner_id', memberId);
+    
+    fetch('api/server.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeTransferOwnershipModal();
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to transfer ownership');
+        }
+    })
+    .catch(error => {
+        console.error('Error transferring ownership:', error);
+        alert('Failed to transfer ownership');
+    });
+}
+
+// User Settings Functions
+function logout() {
+    window.location.href = '../auth/logout.php';
+}
+
+function editBanner() {
+    document.getElementById('bannerInput').click();
+}
+
+function editAvatar() {
+    document.getElementById('avatarInput').click();
+}
+
+function openPasswordChangeModal() {
+    document.getElementById('passwordChangeModal').classList.remove('hidden');
+}
+
+function resetAccountForm() {
+    // Reset the account form to original values
+    location.reload();
+}
+
+function saveAccountChanges() {
+    const formData = new FormData();
+    const form = document.getElementById('accountForm');
+    
+    // Get all form data
+    const formDataObj = new FormData(form);
+    formDataObj.append('action', 'update_account');
+    
+    fetch('api/user.php', {
+        method: 'POST',
+        body: formDataObj
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Account updated successfully');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update account');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating account:', error);
+        alert('Failed to update account');
+    });
+}
+
+function startMicTest() {
+    // Microphone test functionality
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        alert('Microphone test started');
+        // Stop the stream after test
+        stream.getTracks().forEach(track => track.stop());
+    })
+    .catch(error => {
+        console.error('Microphone error:', error);
+        alert('Microphone access denied or not available');
+    });
+}
+
+function testCamera() {
+    // Camera test functionality
+    navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        const video = document.getElementById('cameraPreview');
+        video.srcObject = stream;
+        video.play();
+        document.getElementById('stopCameraBtn').classList.remove('hidden');
+    })
+    .catch(error => {
+        console.error('Camera error:', error);
+        alert('Camera access denied or not available');
+    });
+}
+
+function stopCamera() {
+    const video = document.getElementById('cameraPreview');
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+    }
+    document.getElementById('stopCameraBtn').classList.add('hidden');
+}
+
+function initiateAccountDeletion() {
+    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        const formData = new FormData();
+        formData.append('action', 'delete_account');
+        
+        fetch('api/user.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Account deletion initiated. You will be logged out.');
+                logout();
+            } else {
+                alert(data.message || 'Failed to delete account');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting account:', error);
+            alert('Failed to delete account');
+        });
+    }
+}
+
+function closePasswordChangeModal() {
+    document.getElementById('passwordChangeModal').classList.add('hidden');
+}
+
+function verifySecurityAnswer() {
+    const answer = document.getElementById('securityAnswer').value.trim();
+    if (!answer) {
+        alert('Please enter your security answer');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'verify_security');
+    formData.append('answer', answer);
+    
+    fetch('api/user.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('securityStep').classList.add('hidden');
+            document.getElementById('passwordStep').classList.remove('hidden');
+        } else {
+            alert(data.message || 'Security answer incorrect');
+        }
+    })
+    .catch(error => {
+        console.error('Error verifying security:', error);
+        alert('Failed to verify security answer');
+    });
+}
+
+function changePassword() {
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'change_password');
+    formData.append('new_password', newPassword);
+    
+    fetch('api/user.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Password changed successfully');
+            closePasswordChangeModal();
+        } else {
+            alert(data.message || 'Failed to change password');
+        }
+    })
+    .catch(error => {
+        console.error('Error changing password:', error);
+        alert('Failed to change password');
+    });
+}

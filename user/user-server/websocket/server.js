@@ -12,7 +12,7 @@ const server = http.createServer(app);
 // Configure Socket.IO with CORS
 const io = socketIo(server, {
     cors: {
-        origin: ["http://localhost", "http://127.0.0.1", "http://localhost:3000"],
+        origin: ["http://localhost", "http://127.0.0.1", "http://localhost:3001"],
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -516,7 +516,7 @@ async function getChannelInfo(channelId) {
 async function updateUserStatus(userId, status) {
     try {
         await pool.execute(
-            'INSERT INTO UserLastSeen (UserID, Status, LastSeenAt) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE Status = VALUES(Status), LastSeenAt = VALUES(LastSeenAt)',
+            'INSERT INTO UserLastSeens (UserID, Status, LastSeenAt) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE Status = VALUES(Status), LastSeenAt = VALUES(LastSeenAt)',
             [userId, status]
         );
     } catch (error) {

@@ -106,7 +106,7 @@ echo "Inserted default server categories\n";
 
 // Create UserLastSeen table if it doesn't exist
 $user_last_seen_table = "
-CREATE TABLE IF NOT EXISTS UserLastSeen (
+CREATE TABLE IF NOT EXISTS UserLastSeens (
     ID INTEGER(10) PRIMARY KEY AUTO_INCREMENT,
     UserID INTEGER(10) NOT NULL,
     LastSeenAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

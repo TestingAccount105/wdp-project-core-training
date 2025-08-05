@@ -44,14 +44,14 @@ function getMembers($user_id) {
     if (!is_server_member($user_id, $server_id)) {
         send_response(['error' => 'Access denied'], 403);
     }
-    
-    try {
+        // Joined at aku sama status di usm ilanigngekjwnfrngiuernguierhgerui
+    try { 
         $stmt = $mysqli->prepare("
             SELECT u.ID, u.Username, u.DisplayName, u.ProfilePictureUrl, u.Discriminator,
-                   usm.Role, usm.JoinedAt, uls.Status, uls.LastSeenAt
+                   usm.Role, uls.LastSeenAt
             FROM UserServerMemberships usm
             JOIN Users u ON usm.UserID = u.ID
-            LEFT JOIN UserLastSeen uls ON u.ID = uls.UserID
+            LEFT JOIN UserLastSeens uls ON u.ID = uls.UserID
             WHERE usm.ServerID = ?
             ORDER BY 
                 CASE usm.Role 
@@ -424,7 +424,7 @@ function getMemberProfile($user_id) {
                    u.Bio, u.Discriminator, usm.Role, usm.JoinedAt, uls.Status, uls.LastSeenAt
             FROM UserServerMemberships usm
             JOIN Users u ON usm.UserID = u.ID
-            LEFT JOIN UserLastSeen uls ON u.ID = uls.UserID
+            LEFT JOIN UserLastSeens uls ON u.ID = uls.UserID
             WHERE usm.UserID = ? AND usm.ServerID = ?
         ");
         $stmt->bind_param("ii", $member_id, $server_id);

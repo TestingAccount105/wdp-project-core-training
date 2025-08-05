@@ -345,7 +345,7 @@ function updateStatus($user_id) {
     try {
         // Update or insert user status
         $stmt = $mysqli->prepare("
-            INSERT INTO UserLastSeen (UserID, Status, LastSeenAt) 
+            INSERT INTO UserLastSeens (UserID, Status, LastSeenAt) 
             VALUES (?, ?, NOW()) 
             ON DUPLICATE KEY UPDATE 
             Status = VALUES(Status), 
