@@ -1,7 +1,3 @@
-
-<!--  -->
-
-
 <?php
 header('Content-Type: application/json');
 require_once 'database.php';
@@ -59,7 +55,7 @@ class ChartDataAPI {
         $totalMessages = (int)$totalResult->fetch_assoc()['total'];
         
         // Get today's messages
-        $todayQuery = "SELECT COUNT(*) as today FROM Message WHERE DATE(SendAt) = CURDATE()";
+        $todayQuery = "SELECT COUNT(*) as today FROM Message WHERE DATE(SentAt) = CURDATE()";
         $todayResult = $this->conn->query($todayQuery);
         $todayMessages = (int)$todayResult->fetch_assoc()['today'];
         

@@ -76,6 +76,13 @@ const chartOptions = {
     }
 };
 
+// Store chart instances globally
+let chartInstances = {
+    channelChart: null,
+    messageChart: null,
+    serverChart: null
+};
+
 // Fetch chart data from API
 async function fetchChartData(type = null) {
     try {
@@ -94,6 +101,14 @@ async function fetchChartData(type = null) {
     }
 }
 
+// Destroy existing chart if it exists
+function destroyChart(chartId) {
+    if (chartInstances[chartId]) {
+        chartInstances[chartId].destroy();
+        chartInstances[chartId] = null;
+    }
+}
+
 // Initialize Channel Statistics Chart
 async function initializeChannelChart() {
     const channelData = await fetchChartData('channels');
@@ -103,7 +118,16 @@ async function initializeChannelChart() {
         return;
     }
     
-    const ctx = document.getElementById('channelChart').getContext('2d');
+    const canvasElement = document.getElementById('channelChart');
+    if (!canvasElement) {
+        console.error('Canvas element channelChart not found');
+        return;
+    }
+    
+    // Destroy existing chart
+    destroyChart('channelChart');
+    
+    const ctx = canvasElement.getContext('2d');
     
     // Prepare data for chart
     const labels = channelData.map(item => {
@@ -116,7 +140,7 @@ async function initializeChannelChart() {
     const counts = channelData.map(item => item.count);
     const colors = ['#3498db', '#5865f2', '#9b59b6']; // Blue, Discord Blue, Purple
     
-    new Chart(ctx, {
+    chartInstances.channelChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -153,7 +177,16 @@ async function initializeMessageChart() {
         return;
     }
     
-    const ctx = document.getElementById('messageChart').getContext('2d');
+    const canvasElement = document.getElementById('messageChart');
+    if (!canvasElement) {
+        console.error('Canvas element messageChart not found');
+        return;
+    }
+    
+    // Destroy existing chart
+    destroyChart('messageChart');
+    
+    const ctx = canvasElement.getContext('2d');
     
     // Prepare data for chart
     const labels = messageData.map(item => {
@@ -165,7 +198,7 @@ async function initializeMessageChart() {
     const counts = messageData.map(item => item.count);
     const colors = ['#2ecc71', '#27ae60', '#1abc9c']; // Different shades of green
     
-    new Chart(ctx, {
+    chartInstances.messageChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -202,7 +235,16 @@ async function initializeServerChart() {
         return;
     }
     
-    const ctx = document.getElementById('serverChart').getContext('2d');
+    const canvasElement = document.getElementById('serverChart');
+    if (!canvasElement) {
+        console.error('Canvas element serverChart not found');
+        return;
+    }
+    
+    // Destroy existing chart
+    destroyChart('serverChart');
+    
+    const ctx = canvasElement.getContext('2d');
     
     // Prepare data for chart
     const labels = serverData.map(item => {
@@ -214,7 +256,7 @@ async function initializeServerChart() {
     const counts = serverData.map(item => item.count);
     const colors = ['#9b59b6', '#8e44ad']; // Purple shades
     
-    new Chart(ctx, {
+    chartInstances.serverChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -242,11 +284,23 @@ async function initializeServerChart() {
     });
 }
 
+// Destroy all chart instances
+function destroyAllCharts() {
+    Object.keys(chartInstances).forEach(chartId => {
+        destroyChart(chartId);
+    });
+}
+
 // Initialize all charts
 async function initializeAllCharts() {
     try {
+        console.log('Initializing charts...');
+        
         // Show loading indicators
         showLoadingIndicators();
+        
+        // Destroy existing charts first
+        destroyAllCharts();
         
         // Initialize all charts concurrently
         await Promise.all([
@@ -275,6 +329,12 @@ function showLoadingIndicators() {
             canvas.style.opacity = '0.5';
         }
         
+        // Remove existing loading indicator
+        const existingLoader = container.querySelector('.chart-loading');
+        if (existingLoader) {
+            existingLoader.remove();
+        }
+        
         // Add loading spinner
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'chart-loading';
@@ -287,6 +347,7 @@ function showLoadingIndicators() {
                 color: #3498db;
                 font-size: 14px;
                 text-align: center;
+                z-index: 10;
             ">
                 <div style="
                     width: 20px;
@@ -336,7 +397,12 @@ function hideLoadingIndicators() {
 
 // Show error message
 function showErrorMessage(message) {
+    // Remove existing error messages
+    const existingErrors = document.querySelectorAll('.chart-error-message');
+    existingErrors.forEach(error => error.remove());
+    
     const errorDiv = document.createElement('div');
+    errorDiv.className = 'chart-error-message';
     errorDiv.style.cssText = `
         position: fixed;
         top: 20px;
@@ -348,6 +414,7 @@ function showErrorMessage(message) {
         z-index: 1000;
         font-size: 14px;
         max-width: 300px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     `;
     errorDiv.textContent = message;
     document.body.appendChild(errorDiv);
@@ -368,12 +435,7 @@ async function refreshChartData() {
         refreshButton.textContent = 'Refreshing...';
     }
     
-    // Clear existing charts
-    Chart.helpers.each(Chart.instances, function(instance) {
-        instance.destroy();
-    });
-    
-    // Reinitialize charts
+    // Reinitialize charts (destroyAllCharts is called within initializeAllCharts)
     await initializeAllCharts();
     
     if (refreshButton) {
@@ -385,17 +447,27 @@ async function refreshChartData() {
 // Mobile sidebar toggle
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
-    sidebar.classList.toggle('active');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
 }
 
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing charts...');
+    
     // Initialize charts
     initializeAllCharts();
     
     // Add refresh button
     const activitySection = document.querySelector('.activity-section h2');
     if (activitySection) {
+        // Remove existing refresh button if it exists
+        const existingButton = document.getElementById('refresh-charts');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
         const refreshButton = document.createElement('button');
         refreshButton.id = 'refresh-charts';
         refreshButton.textContent = 'Refresh Charts';
@@ -409,14 +481,28 @@ document.addEventListener('DOMContentLoaded', function() {
             cursor: pointer;
             font-size: 14px;
             margin-left: 20px;
+            transition: background-color 0.3s;
         `;
+        refreshButton.onmouseover = function() {
+            this.style.backgroundColor = '#2980b9';
+        };
+        refreshButton.onmouseout = function() {
+            this.style.backgroundColor = '#3498db';
+        };
         refreshButton.onclick = refreshChartData;
         activitySection.appendChild(refreshButton);
     }
     
     // Add mobile menu button if needed
     if (window.innerWidth <= 768) {
+        // Remove existing menu button if it exists
+        const existingMenuButton = document.querySelector('.mobile-menu-button');
+        if (existingMenuButton) {
+            existingMenuButton.remove();
+        }
+        
         const menuButton = document.createElement('button');
+        menuButton.className = 'mobile-menu-button';
         menuButton.innerHTML = '☰';
         menuButton.style.cssText = `
             position: fixed;
@@ -434,9 +520,11 @@ document.addEventListener('DOMContentLoaded', function() {
         menuButton.onclick = toggleSidebar;
         document.body.appendChild(menuButton);
     }
-    
-    // Auto-refresh charts every 5 minutes
-    setInterval(refreshChartData, 5 * 60 * 1000);
+});
+
+// Clean up charts when page is about to unload
+window.addEventListener('beforeunload', function() {
+    destroyAllCharts();
 });
 
 // Legacy function for backward compatibility
