@@ -84,7 +84,7 @@ if (!empty($params)) {
 }
 
 // Get users with pagination
-$query = "SELECT ID, Username, Email, Status, AvatarURL, Discriminator, DisplayName
+$query = "SELECT ID, Username, Email, Status, AvatarURL, Discriminator, DisplayName, CreatedAt
           FROM Users $whereClause 
         --   ORDER BY CreatedAt DESC 
           LIMIT $limit OFFSET $offset";
@@ -184,7 +184,77 @@ $totalPages = ceil($totalUsers / $limit);
             </div>
 
             <!-- Users Content -->
-            <div class="users-container">
+            <div class="users-container" id="usersContainer">
+                <!-- Skeleton Loading for Table View -->
+                <div id="skeletonTableView" class="table-view skeleton-table">
+                    <div class="table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Avatar</th>
+                                    <th>Username</th>
+                                    <th>ID</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Skeleton rows -->
+                                <?php for ($i = 0; $i < 8; $i++): ?>
+                                <tr>
+                                    <td>
+                                        <div class="skeleton-avatar"></div>
+                                    </td>
+                                    <td><div class="skeleton-text medium"></div></td>
+                                    <td><div class="skeleton-text short"></div></td>
+                                    <td><div class="skeleton-text long"></div></td>
+                                    <td><div class="skeleton-badge"></div></td>
+                                    <td><div class="skeleton-text medium"></div></td>
+                                    <td><div class="skeleton-button"></div></td>
+                                </tr>
+                                <?php endfor; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Skeleton Loading for Grid View -->
+                <div id="skeletonGridView" class="grid-view skeleton-grid">
+                    <div class="users-grid">
+                        <!-- Skeleton cards -->
+                        <?php for ($i = 0; $i < 6; $i++): ?>
+                        <div class="skeleton-card-modern">
+                            <div class="skeleton-card-header">
+                                <div class="skeleton-avatar"></div>
+                                <div style="flex: 1;">
+                                    <div class="skeleton-text medium" style="margin-bottom: 8px;"></div>
+                                    <div class="skeleton-text short"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-card-body">
+                                <div class="skeleton-card-row">
+                                    <div class="skeleton-detail-icon"></div>
+                                    <div class="skeleton-text medium"></div>
+                                </div>
+                                <div class="skeleton-card-row">
+                                    <div class="skeleton-detail-icon"></div>
+                                    <div class="skeleton-text long"></div>
+                                </div>
+                                <div class="skeleton-card-row">
+                                    <div class="skeleton-detail-icon"></div>
+                                    <div class="skeleton-text short"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-card-actions">
+                                <div class="skeleton-button"></div>
+                            </div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+
                 <!-- Table View -->
                 <div id="tableView" class="table-view active">
                     <div class="table-container">
@@ -377,17 +447,75 @@ $totalPages = ceil($totalUsers / $limit);
     <script>
         let currentUserId = null;
         let currentUsername = null;
+        let isLoading = false;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            initializeEventListeners();
+            // Show skeleton loading on page load
+            showSkeletonLoading();
+            
+            // Simulate loading time and then show real content
+            setTimeout(() => {
+                hideSkeletonLoading();
+                initializeEventListeners();
+            }, 2000); // 2 second loading simulation
         });
+
+        // Show skeleton loading
+        function showSkeletonLoading() {
+            isLoading = true;
+            const currentView = document.querySelector('.view-btn.active').dataset.view;
+            
+            // Hide real content
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('gridView').style.display = 'none';
+            
+            // Show appropriate skeleton
+            if (currentView === 'table') {
+                document.getElementById('skeletonTableView').classList.add('active');
+                document.getElementById('skeletonGridView').classList.remove('active');
+            } else {
+                document.getElementById('skeletonGridView').classList.add('active');
+                document.getElementById('skeletonTableView').classList.remove('active');
+            }
+            
+            // Add loading class to container
+            document.getElementById('usersContainer').classList.add('loading');
+        }
+
+        // Hide skeleton loading
+        function hideSkeletonLoading() {
+            isLoading = false;
+            const currentView = document.querySelector('.view-btn.active').dataset.view;
+            
+            // Hide skeletons
+            document.getElementById('skeletonTableView').classList.remove('active');
+            document.getElementById('skeletonGridView').classList.remove('active');
+            
+            // Show real content with fade in
+            setTimeout(() => {
+                if (currentView === 'table') {
+                    document.getElementById('tableView').style.display = 'block';
+                    document.getElementById('tableView').classList.add('active');
+                    document.getElementById('gridView').classList.remove('active');
+                } else {
+                    document.getElementById('gridView').style.display = 'block';
+                    document.getElementById('gridView').classList.add('active');
+                    document.getElementById('tableView').classList.remove('active');
+                }
+                
+                // Remove loading class
+                document.getElementById('usersContainer').classList.remove('loading');
+            }, 100);
+        }
 
         // Initialize all event listeners
         function initializeEventListeners() {
             // View toggle buttons
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    if (isLoading) return; // Prevent interaction during loading
+                    
                     const view = this.dataset.view;
                     toggleView(view);
                 });
@@ -395,13 +523,15 @@ $totalPages = ceil($totalUsers / $limit);
 
             // Filter dropdown
             document.getElementById('userFilter').addEventListener('change', function() {
-                applyFilters();
+                if (isLoading) return;
+                applyFiltersWithLoading();
             });
 
             // Search input
             document.getElementById('searchInput').addEventListener('input', debounce(function() {
-                applyFilters();
-            }, 300));
+                if (isLoading) return;
+                applyFiltersWithLoading();
+            }, 500));
 
             // Ban/Unban buttons
             document.querySelectorAll('.ban-btn').forEach(btn => {
@@ -446,10 +576,24 @@ $totalPages = ceil($totalUsers / $limit);
             });
         }
 
+        // Apply filters with loading animation
+        function applyFiltersWithLoading() {
+            showSkeletonLoading();
+            
+            // Delay the actual filter application to show loading
+            setTimeout(() => {
+                applyFilters();
+            }, 800);
+        }
+
         // Toggle between table and grid view
         function toggleView(view) {
+            if (isLoading) return;
+            
             const tableView = document.getElementById('tableView');
             const gridView = document.getElementById('gridView');
+            const skeletonTableView = document.getElementById('skeletonTableView');
+            const skeletonGridView = document.getElementById('skeletonGridView');
             const viewBtns = document.querySelectorAll('.view-btn');
 
             // Update buttons
@@ -457,14 +601,25 @@ $totalPages = ceil($totalUsers / $limit);
                 btn.classList.toggle('active', btn.dataset.view === view);
             });
 
-            // Update views
-            if (view === 'table') {
-                tableView.classList.add('active');
-                gridView.classList.remove('active');
-            } else {
-                tableView.classList.remove('active');
-                gridView.classList.add('active');
-            }
+            // Show loading for view change
+            showSkeletonLoading();
+            
+            setTimeout(() => {
+                // Update views
+                if (view === 'table') {
+                    tableView.style.display = 'block';
+                    gridView.style.display = 'none';
+                    tableView.classList.add('active');
+                    gridView.classList.remove('active');
+                } else {
+                    tableView.style.display = 'none';
+                    gridView.style.display = 'block';
+                    tableView.classList.remove('active');
+                    gridView.classList.add('active');
+                }
+                
+                hideSkeletonLoading();
+            }, 600);
         }
 
         // Apply filters and search
@@ -545,9 +700,12 @@ $totalPages = ceil($totalUsers / $limit);
                 if (data.success) {
                     showToast(`User ${currentUsername} has been banned successfully`, 'success');
                     closeModal('banModal');
-                    // Reload page to reflect changes
+                    // Reload page to reflect changes with loading
                     setTimeout(() => {
-                        window.location.reload();
+                        showSkeletonLoading();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
                     }, 1000);
                 } else {
                     showToast(data.message || 'Failed to ban user', 'error');
@@ -576,9 +734,12 @@ $totalPages = ceil($totalUsers / $limit);
                 if (data.success) {
                     showToast(`User ${currentUsername} has been unbanned successfully`, 'success');
                     closeModal('unbanModal');
-                    // Reload page to reflect changes
+                    // Reload page to reflect changes with loading
                     setTimeout(() => {
-                        window.location.reload();
+                        showSkeletonLoading();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
                     }, 1000);
                 } else {
                     showToast(data.message || 'Failed to unban user', 'error');
