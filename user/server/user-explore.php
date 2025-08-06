@@ -284,8 +284,7 @@ if (isset($_POST['action'])) {
 <body>
     <div class="app-container">
         <!-- Left Sidebar -->
-        <div class="left-sidebar">
-            <!-- Server List Icons -->
+        <!-- <div class="left-sidebar">
             <div class="server-list">
                 <div class="server-icon home-icon" title="Home">
                     <span>⚔️</span>
@@ -300,6 +299,39 @@ if (isset($_POST['action'])) {
                 <div class="server-separator"></div>
                 <div class="server-icon explore-icon active" title="Explore Servers">
                     <span>🧭</span>
+                </div>
+            </div>
+        </div> -->
+        <div class="server-sidebar">
+            <div class="server-nav">
+                <!-- Home Button -->
+                <div class="server-item home-server" data-tooltip="Home" onclick="navigateToHome()">
+                    <div class="server-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                </div>
+                
+                <div class="server-separator"></div>
+                
+                <!-- User Servers List -->
+                <div class="user-servers" id="userServersList">
+                    <!-- User servers will be loaded here -->
+                </div>
+                
+                <!-- Add Server Button -->
+                <div class="server-item add-server" data-tooltip="Add a Server" onclick="openCreateServerModal()">
+                    <div class="server-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                </div>
+                
+                <div class="server-separator"></div>
+                
+                <!-- Explore Button -->
+                <div class="server-item explore-server" data-tooltip="Explore Public Servers" onclick="navigateToExplore()">
+                    <div class="server-icon">
+                        <i class="fas fa-compass"></i>
+                    </div>
                 </div>
             </div>
         </div>
