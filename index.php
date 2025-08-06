@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>MisVord - Hero Section</title>
+		<title>MisVord</title>
 		<style>
 			* {
 				margin: 0;
@@ -28,7 +28,6 @@
 				text-align: center;
 			}
 
-			/* Login Button */
 			.login-container {
 				position: fixed;
 				top: 2rem;
@@ -99,7 +98,6 @@
 				opacity: 1;
 			}
 
-			/* Floating Elements */
 			.floating-elements {
 				position: absolute;
 				top: 0;
@@ -204,7 +202,6 @@
 				}
 			}
 
-			/* Particles */
 			.particles {
 				position: absolute;
 				top: 0;
@@ -236,7 +233,6 @@
 				}
 			}
 
-			/* Enhanced Main Content with Light Sweep Animation */
 			.main-text {
 				font-size: clamp(4rem, 12vw, 8rem);
 				font-weight: 900;
@@ -1198,7 +1194,6 @@
 	</head>
 	<body>
 		<div class="hero-section">
-			<!-- Login Button -->
 			<div class="login-container">
 				<div class="login-btn">
 					<svg viewBox="0 0 24 24">
@@ -1208,7 +1203,6 @@
 				</div>
 			</div>
 
-			<!-- Floating Elements -->
 			<div class="floating-elements">
 				<img src="assets/landing-page/box_converted.png" alt="Floating Element 1" class="floating-item" />
 				<img src="assets/landing-page/flying-cat_converted.png" alt="Floating Element 2" class="floating-item" />
@@ -1220,20 +1214,15 @@
 				<img src="assets/landing-page/wumpus_happy_converted.png" alt="Floating Element 8" class="floating-item" />
 			</div>
 
-			<!-- Particles -->
 			<div class="particles" id="particles"></div>
 
-			<!-- Glow Effect -->
 			<div class="glow-effect"></div>
 
-			<!-- Enhanced Main Content with Light Sweep -->
 			<div class="main-text" id="mainText">MISVORD</div>
 			<div class="subtitle">Confront the challenges of learning and outgrow the boundaries together.</div>
 
-			<!-- Version Text -->
 			<div class="version-text">~24-2</div>
 
-			<!-- Scroll Indicator -->
 			<div class="scroll-indicator" onclick="scrollToFeatures()">
 				<svg viewBox="0 0 24 24">
 					<path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
@@ -1241,10 +1230,8 @@
 			</div>
 		</div>
 
-		<!-- Features Section with Particle Effects -->
 		<div class="features-section" id="featuresSection">
 			<div class="features-container">
-				<!-- Voice Chat Card -->
 				<div class="feature-card voice-chat">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1282,7 +1269,6 @@
 					</div>
 				</div>
 
-				<!-- Nitro Premium Card -->
 				<div class="feature-card nitro-premium">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1320,7 +1306,6 @@
 					</div>
 				</div>
 
-				<!-- Smart Bots Card -->
 				<div class="feature-card smart-bots">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1697,7 +1682,6 @@
 				}
 			}
 
-			// Particle system
 			function createParticles() {
 				const particleContainers = ["particles", "particles2", "particles3"];
 
@@ -1725,7 +1709,6 @@
 				});
 			}
 
-			// Feature Card Particles
 			function createCardParticles() {
 				const featureCards = document.querySelectorAll(".feature-card");
 
@@ -1747,14 +1730,12 @@
 				});
 			}
 
-			// Scroll to features function
 			function scrollToFeatures() {
 				document.getElementById("featuresSection").scrollIntoView({
 					behavior: "smooth",
 				});
 			}
 
-			// 3D Card Tilt Effect
 			class Card3D {
 				constructor() {
 					this.cards = document.querySelectorAll(".feature-card");
@@ -1777,17 +1758,14 @@
 					const mouseX = e.clientX - rect.left - cardWidth / 2;
 					const mouseY = e.clientY - rect.top - cardHeight / 2;
 
-					// Increased rotation from ±15 to ±30 degrees for more dramatic movement
 					const rotateX = (mouseY / cardHeight) * -30;
 					const rotateY = (mouseX / cardWidth) * 30;
 
-					// Increased lift and scale for more noticeable effect
 					card.style.transform = `translateY(-15px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.08, 1.08, 1.08)`;
 
 					const glowX = (mouseX / cardWidth) * 100 + 50;
 					const glowY = (mouseY / cardHeight) * 100 + 50;
 
-					// Enhanced glow effect
 					card.style.background = `
 						radial-gradient(circle at ${glowX}% ${glowY}%, rgba(255, 255, 255, 0.2) 0%, rgba(45, 45, 60, 0.8) 50%),
 						rgba(45, 45, 60, 0.8)
@@ -1809,7 +1787,6 @@
 				}
 			}
 
-			// Book functionality with enhanced flip animation
 			function nextStory() {
 				if (!bookOpened) {
 					openBook();
@@ -1818,7 +1795,6 @@
 						currentPage++;
 						updateBookPages();
 
-						// Add enhanced page flip animation
 						const leftPage = document.getElementById("leftPage");
 						const rightPage = document.getElementById("rightPage");
 
@@ -1830,7 +1806,6 @@
 							rightPage.classList.remove("page-flip-right");
 						}, 1200);
 					} else {
-						// Reset to beginning with flip animation
 						currentPage = 0;
 						updateBookPages();
 
@@ -1857,15 +1832,12 @@
 				const storiesPage = document.getElementById("storiesPage");
 				const leftPageContent = document.getElementById("leftPageContent");
 
-				// Hide stories page and show content pages
 				storiesPage.style.display = "none";
 				leftPageContent.style.display = "flex";
 				rightPage.style.display = "block";
 
-				// Add opened class for mirror effect
 				leftPage.classList.add("opened");
 
-				// Add flip animation
 				leftPage.classList.add("flipping");
 				setTimeout(() => {
 					leftPage.classList.remove("flipping");
@@ -1879,7 +1851,6 @@
 
 				const currentPageData = bookPages[currentPage];
 
-				// Update left page (with mirror effect)
 				leftPageContent.innerHTML = `
                 <div class="page-title">${currentPageData.left.title}</div>
                 <div class="page-icon">${currentPageData.left.icon}</div>
@@ -1895,7 +1866,6 @@
 								}
             `;
 
-				// Update right page
 				rightPageContent.innerHTML = `
                 <div class="page-title">${currentPageData.right.title}</div>
                 <div class="page-icon">${currentPageData.right.icon}</div>
@@ -1912,7 +1882,6 @@
             `;
 			}
 
-			// Nitro Interactive System - Fixed for proper hexagon orbit
 			class NitroInteractive {
 				constructor() {
 					this.nitroCenter = document.getElementById("nitroCenter");
@@ -1926,24 +1895,20 @@
 				}
 
 				init() {
-					// Store initial center position
 					const rect = this.nitroInteractive.getBoundingClientRect();
 					this.centerPosition = {
 						x: rect.width / 2,
 						y: rect.height / 2,
 					};
 
-					// Mouse events for dragging
 					this.nitroCenter.addEventListener("mousedown", (e) => this.startDrag(e));
 					document.addEventListener("mousemove", (e) => this.drag(e));
 					document.addEventListener("mouseup", () => this.endDrag());
 
-					// Touch events for mobile
 					this.nitroCenter.addEventListener("touchstart", (e) => this.startDrag(e.touches[0]));
 					document.addEventListener("touchmove", (e) => this.drag(e.touches[0]));
 					document.addEventListener("touchend", () => this.endDrag());
 
-					// Hover effects - only expand on center hover
 					this.nitroCenter.addEventListener("mouseenter", () => this.expandHexagons());
 					this.nitroCenter.addEventListener("mouseleave", () => this.contractHexagons());
 				}
@@ -1969,7 +1934,6 @@
 					const newX = e.clientX - containerRect.left - this.dragOffset.x - 60;
 					const newY = e.clientY - containerRect.top - this.dragOffset.y - 60;
 
-					// Constrain to container bounds
 					const maxX = containerRect.width - 120;
 					const maxY = containerRect.height - 120;
 
@@ -1979,7 +1943,6 @@
 					this.nitroCenter.style.left = constrainedX + "px";
 					this.nitroCenter.style.top = constrainedY + "px";
 
-					// Update hexagon positions relative to center
 					this.updateHexagonPositions(constrainedX + 60, constrainedY + 60);
 				}
 
@@ -2031,7 +1994,6 @@
 				}
 			}
 
-			// Initialize everything when DOM is loaded
 			document.addEventListener("DOMContentLoaded", function () {
 				new CharacterScrambler();
 				createParticles();
@@ -2040,7 +2002,6 @@
 				new NitroInteractive();
 			});
 
-			// Add click handler for login button
 			document.querySelector(".login-btn").addEventListener("click", function () {
 				alert("Login functionality would be implemented here!");
 			});
