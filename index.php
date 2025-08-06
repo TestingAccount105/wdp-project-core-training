@@ -115,15 +115,14 @@
 				width: 60px;
 				height: 60px;
 				border-radius: 12px;
-				background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
 				animation: float 6s ease-in-out infinite;
 				opacity: 0.8;
+				object-fit: cover;
 			}
 
 			.floating-item:nth-child(1) {
 				top: 15%;
 				left: 8%;
-				background: linear-gradient(45deg, #667eea, #764ba2);
 				animation-delay: 0s;
 				animation-duration: 8s;
 			}
@@ -131,7 +130,6 @@
 			.floating-item:nth-child(2) {
 				top: 25%;
 				right: 12%;
-				background: linear-gradient(45deg, #f093fb, #f5576c);
 				animation-delay: -2s;
 				animation-duration: 7s;
 				width: 50px;
@@ -141,7 +139,6 @@
 			.floating-item:nth-child(3) {
 				top: 45%;
 				right: 8%;
-				background: linear-gradient(45deg, #4facfe, #00f2fe);
 				animation-delay: -4s;
 				animation-duration: 9s;
 				width: 70px;
@@ -151,7 +148,6 @@
 			.floating-item:nth-child(4) {
 				bottom: 25%;
 				left: 10%;
-				background: linear-gradient(45deg, #43e97b, #38f9d7);
 				animation-delay: -1s;
 				animation-duration: 6s;
 				width: 55px;
@@ -161,7 +157,6 @@
 			.floating-item:nth-child(5) {
 				bottom: 35%;
 				right: 15%;
-				background: linear-gradient(45deg, #fa709a, #fee140);
 				animation-delay: -3s;
 				animation-duration: 8s;
 			}
@@ -169,7 +164,6 @@
 			.floating-item:nth-child(6) {
 				top: 35%;
 				left: 5%;
-				background: linear-gradient(45deg, #a8edea, #fed6e3);
 				animation-delay: -5s;
 				animation-duration: 7s;
 				width: 45px;
@@ -179,7 +173,6 @@
 			.floating-item:nth-child(7) {
 				top: 60%;
 				left: 15%;
-				background: linear-gradient(45deg, #ff9a9e, #fecfef);
 				animation-delay: -2.5s;
 				animation-duration: 8.5s;
 				width: 65px;
@@ -189,7 +182,6 @@
 			.floating-item:nth-child(8) {
 				top: 10%;
 				right: 25%;
-				background: linear-gradient(45deg, #a18cd1, #fbc2eb);
 				animation-delay: -1.5s;
 				animation-duration: 7.5s;
 				width: 40px;
@@ -479,7 +471,7 @@
 				top: 0;
 				left: 0;
 				width: 100%;
-				height: 100%;
+				/* height: 100%; */
 				pointer-events: none;
 				opacity: 0;
 				transition: opacity 0.3s ease;
@@ -1094,7 +1086,7 @@
 
 			.premium-label {
 				position: absolute;
-				right: 2rem;
+				right: -15%;
 				top: 50%;
 				transform: translateY(-50%) rotate(90deg);
 				font-size: 1rem;
@@ -1218,14 +1210,14 @@
 
 			<!-- Floating Elements -->
 			<div class="floating-elements">
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
-				<div class="floating-item"></div>
+				<img src="assets/landing-page/box_converted.png" alt="Floating Element 1" class="floating-item" />
+				<img src="assets/landing-page/flying-cat_converted.png" alt="Floating Element 2" class="floating-item" />
+				<img src="assets/landing-page/pan_converted.png" alt="Floating Element 3" class="floating-item" />
+				<img src="assets/landing-page/actor-sit_converted.png" alt="Floating Element 4" class="floating-item" />
+				<img src="assets/landing-page/green-egg_converted.png" alt="Floating Element 5" class="floating-item" />
+				<img src="assets/landing-page/pan_converted.png" alt="Floating Element 6" class="floating-item" />
+				<img src="assets/landing-page/thropy_converted.png"Floating Element 7" class="floating-item" />
+				<img src="assets/landing-page/wumpus_happy_converted.png" alt="Floating Element 8" class="floating-item" />
 			</div>
 
 			<!-- Particles -->
@@ -1523,7 +1515,7 @@
 
 				<div class="nitro-interactive" id="nitroInteractive">
 					<div class="nitro-center" id="nitroCenter">
-						<div class="nitro-logo">N</div>
+						<img src="assets/common/nitro_converted.png" alt="" class="nitro-logo" width="100">
 					</div>
 
 					<div class="hexagon">
@@ -1571,8 +1563,6 @@
 
 				<div class="premium-label">Premium</div>
 			</div>
-
-			<div class="scroll-navigation">← Scroll to navigate →</div>
 		</div>
 
 		<script>
@@ -1741,7 +1731,7 @@
 
 				featureCards.forEach((card) => {
 					const particleContainer = card.querySelector(".card-particles");
-					const particleCount = 8;
+					const particleCount = 16;
 
 					for (let i = 0; i < particleCount; i++) {
 						const particle = document.createElement("div");
@@ -1787,18 +1777,21 @@
 					const mouseX = e.clientX - rect.left - cardWidth / 2;
 					const mouseY = e.clientY - rect.top - cardHeight / 2;
 
-					const rotateX = (mouseY / cardHeight) * -15;
-					const rotateY = (mouseX / cardWidth) * 15;
+					// Increased rotation from ±15 to ±30 degrees for more dramatic movement
+					const rotateX = (mouseY / cardHeight) * -30;
+					const rotateY = (mouseX / cardWidth) * 30;
 
-					card.style.transform = `translateY(-5px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+					// Increased lift and scale for more noticeable effect
+					card.style.transform = `translateY(-15px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.08, 1.08, 1.08)`;
 
 					const glowX = (mouseX / cardWidth) * 100 + 50;
 					const glowY = (mouseY / cardHeight) * 100 + 50;
 
+					// Enhanced glow effect
 					card.style.background = `
-                    radial-gradient(circle at ${glowX}% ${glowY}%, rgba(255, 255, 255, 0.1) 0%, rgba(45, 45, 60, 0.8) 50%),
-                    rgba(45, 45, 60, 0.8)
-                `;
+						radial-gradient(circle at ${glowX}% ${glowY}%, rgba(255, 255, 255, 0.2) 0%, rgba(45, 45, 60, 0.8) 50%),
+						rgba(45, 45, 60, 0.8)
+					`;
 				}
 
 				handleMouseEnter(e, card) {
@@ -1806,13 +1799,13 @@
 				}
 
 				handleMouseLeave(e, card) {
-					card.style.transition = "all 0.5s ease";
+					card.style.transition = "all 0.6s ease";
 					card.style.transform = "translateY(-5px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
 					card.style.background = "rgba(45, 45, 60, 0.8)";
 
 					setTimeout(() => {
 						card.style.transition = "all 0.3s ease";
-					}, 500);
+					}, 600);
 				}
 			}
 
