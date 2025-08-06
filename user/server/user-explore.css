@@ -1217,3 +1217,40 @@ body {
 .control-btn.settings-btn:hover {
   background-color: #36393f;
 }
+
+/* Floating Add Server Button */
+.floating-add-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
+  width: 60px !important;
+  height: 60px !important;
+  background-color: #5865f2 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 50% !important;
+  font-size: 28px !important;
+  font-weight: 300 !important;
+  box-shadow: 0 8px 24px rgba(88, 101, 242, 0.4) !important;
+  z-index: 1000 !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+
+.floating-add-btn:hover {
+  background-color: #4752c4 !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 12px 32px rgba(88, 101, 242, 0.6) !important;
+}
+
+.floating-add-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.floating-add-btn span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}

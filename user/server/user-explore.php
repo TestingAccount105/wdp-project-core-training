@@ -303,8 +303,11 @@ if (isset($_POST['action'])) {
 </head>
 <body>
     <div class="app-container">
+        <div class="server-icon add-server floating-add-btn" id="floatingAddBtn" onclick="showJoinServerModal()" title="Add Server">
+            <span>+</span>
+        </div>
         <!-- Left Sidebar -->
-        <div class="left-sidebar">
+        <!-- <div class="left-sidebar">
             <div class="server-list">
                 <div class="server-icon home-icon" title="Home">
                     <span>⚔️</span>
@@ -313,15 +316,12 @@ if (isset($_POST['action'])) {
                 <div class="server-icon user-server" title="My Server">
                     <img src="https://via.placeholder.com/48/36393f/ffffff?text=👤" alt="User Server">
                 </div>
-                <div class="server-icon add-server" onclick="showJoinServerModal()" title="Add Server">
-                    <span>+</span>
-                </div>
                 <div class="server-separator"></div>
                 <div class="server-icon explore-icon active" title="Explore Servers">
                     <span>🧭</span>
                 </div>
             </div>
-        </div>
+        </div> -->
         <div class="server-sidebar">
             <div class="server-nav">
                 <!-- Home Button -->
