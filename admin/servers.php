@@ -91,7 +91,7 @@ $query = "SELECT
             s.Name,
             s.IconServer,
             s.Description,
-            -- s.CreatedAt,
+            s.CreatedAt,
             u.Username as OwnerUsername,
             u.Discriminator as OwnerDiscriminator,
             (SELECT COUNT(*) FROM UserServerMemberships WHERE ServerID = s.ID) as MemberCount
