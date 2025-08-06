@@ -671,3 +671,302 @@
         font-size: 12px;
     }
 }
+
+/* Skeleton Loading Styles */
+.skeleton-loading {
+    position: relative;
+    overflow: hidden;
+    background: #34495e;
+    border-radius: 4px;
+}
+
+.skeleton-loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Skeleton table styles */
+.skeleton-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.skeleton-table th {
+    background-color: #34495e;
+    color: #95a5a6;
+    padding: 15px 20px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.skeleton-table td {
+    padding: 15px 20px;
+    border-bottom: 1px solid #34495e;
+    vertical-align: middle;
+}
+
+.skeleton-row {
+    height: 55px;
+}
+
+.skeleton-cell {
+    height: 20px;
+    background: #34495e;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+/* Different widths for realistic appearance */
+.skeleton-cell.width-60 {
+    width: 60px;
+}
+
+.skeleton-cell.width-80 {
+    width: 80px;
+}
+
+.skeleton-cell.width-100 {
+    width: 100px;
+}
+
+.skeleton-cell.width-120 {
+    width: 120px;
+}
+
+.skeleton-cell.width-140 {
+    width: 140px;
+}
+
+.skeleton-cell.width-160 {
+    width: 160px;
+}
+
+.skeleton-cell.width-180 {
+    width: 180px;
+}
+
+.skeleton-cell.width-200 {
+    width: 200px;
+}
+
+/* Skeleton status badge */
+.skeleton-status {
+    width: 60px;
+    height: 20px;
+    background: #34495e;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-status::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+/* Skeleton action buttons */
+.skeleton-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.skeleton-action-btn {
+    width: 30px;
+    height: 30px;
+    background: #34495e;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+/* Hide real table content during loading */
+.loading-state .codes-table {
+    display: none;
+}
+
+.loading-state .skeleton-table {
+    display: table;
+}
+
+/* Initial state - show skeleton by default */
+.skeleton-table {
+    display: table;
+}
+
+.codes-table {
+    display: none;
+}
+
+/* After loading - show real table */
+.loaded .skeleton-table {
+    display: none;
+}
+
+.loaded .codes-table {
+    display: table;
+}
+
+/* Skeleton pagination */
+.skeleton-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #34495e;
+}
+
+.skeleton-pagination-info {
+    width: 150px;
+    height: 20px;
+    background: #34495e;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-pagination-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-pagination-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.skeleton-pagination-btn {
+    width: 80px;
+    height: 36px;
+    background: #34495e;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-pagination-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+/* Loading overlay for better UX */
+.loading-overlay {
+    position: relative;
+}
+
+.loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(44, 62, 80, 0.7);
+    backdrop-filter: blur(2px);
+    border-radius: 8px;
+    z-index: 10;
+    display: none;
+}
+
+.loading-overlay.active::after {
+    display: block;
+}
+
+/* Delay animation for different rows */
+.skeleton-row:nth-child(1) .skeleton-cell::before { animation-delay: 0s; }
+.skeleton-row:nth-child(2) .skeleton-cell::before { animation-delay: 0.1s; }
+.skeleton-row:nth-child(3) .skeleton-cell::before { animation-delay: 0.2s; }
+.skeleton-row:nth-child(4) .skeleton-cell::before { animation-delay: 0.3s; }
+.skeleton-row:nth-child(5) .skeleton-cell::before { animation-delay: 0.4s; }
+.skeleton-row:nth-child(6) .skeleton-cell::before { animation-delay: 0.5s; }
+.skeleton-row:nth-child(7) .skeleton-cell::before { animation-delay: 0.6s; }
+.skeleton-row:nth-child(8) .skeleton-cell::before { animation-delay: 0.7s; }

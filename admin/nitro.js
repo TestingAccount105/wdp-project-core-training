@@ -7,7 +7,30 @@ let searchTimeout = null;
 // Initialize page
 $(document).ready(function() {
     initializeEventListeners();
+    
+    // Simulate initial loading
+    setTimeout(() => {
+        hideSkeletonLoading();
+    }, 2000);
 });
+
+// Show skeleton loading
+function showSkeletonLoading() {
+    $('.codes-section').removeClass('loaded');
+    $('.skeleton-table').show();
+    $('.codes-table').hide();
+    $('.skeleton-pagination').show();
+    $('.pagination-container').hide();
+}
+
+// Hide skeleton loading
+function hideSkeletonLoading() {
+    $('.codes-section').addClass('loaded');
+    $('.skeleton-table').hide();
+    $('.codes-table').show();
+    $('.skeleton-pagination').hide();
+    $('.pagination-container').show();
+}
 
 // Initialize event listeners
 function initializeEventListeners() {
@@ -52,7 +75,7 @@ function initializeEventListeners() {
 
     // Code search
     $('#codeSearch').on('input', debounce(function() {
-        applySearch();
+        applySearchWithLoading();
     }, 500));
 
     // Copy code buttons
@@ -203,6 +226,18 @@ function generateCode() {
     });
 }
 
+// Apply search with loading
+function applySearchWithLoading() {
+    showSkeletonLoading();
+    
+    // Prevent user interaction during loading
+    $('#codeSearch').prop('disabled', true);
+    
+    setTimeout(() => {
+        applySearch();
+    }, 800);
+}
+
 // Apply search
 function applySearch() {
     const search = $('#codeSearch').val();
@@ -213,6 +248,15 @@ function applySearch() {
     
     const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
     window.location.href = newUrl;
+}
+
+// Change page with loading
+function changePageWithLoading(page) {
+    showSkeletonLoading();
+    
+    setTimeout(() => {
+        changePage(page);
+    }, 500);
 }
 
 // Change page
@@ -291,6 +335,10 @@ function closeAllModals() {
 function deleteCode(codeId) {
     if (!codeId) return;
     
+    // Show loading state on the delete button
+    const deleteBtn = $('#confirmDelete');
+    deleteBtn.prop('disabled', true).text('Deleting...');
+    
     $.ajax({
         url: 'nitro.php',
         method: 'POST',
@@ -312,6 +360,9 @@ function deleteCode(codeId) {
         },
         error: function() {
             showToast('Failed to delete code. Please try again.', 'error');
+        },
+        complete: function() {
+            deleteBtn.prop('disabled', false).text('Delete Code');
         }
     });
 }

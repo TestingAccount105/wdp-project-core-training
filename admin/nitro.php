@@ -352,6 +352,38 @@ function generateNitroCode() {
                 </div>
                 
                 <div class="table-container">
+                    <!-- Skeleton Table (shown by default) -->
+                    <table class="skeleton-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Code</th>
+                                <th>User</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php for ($i = 0; $i < 8; $i++): ?>
+                            <tr class="skeleton-row">
+                                <td><div class="skeleton-cell width-60"></div></td>
+                                <td><div class="skeleton-cell width-200"></div></td>
+                                <td><div class="skeleton-cell width-140"></div></td>
+                                <td><div class="skeleton-status"></div></td>
+                                <td><div class="skeleton-cell width-120"></div></td>
+                                <td>
+                                    <div class="skeleton-actions">
+                                        <div class="skeleton-action-btn"></div>
+                                        <div class="skeleton-action-btn"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endfor; ?>
+                        </tbody>
+                    </table>
+
+                    <!-- Real Table (hidden by default) -->
                     <table class="codes-table">
                         <thead>
                             <tr>
@@ -396,20 +428,29 @@ function generateNitroCode() {
                 </div>
             </div>
 
-            <!-- Pagination -->
+            <!-- Skeleton Pagination (shown by default) -->
+            <div class="skeleton-pagination">
+                <div class="skeleton-pagination-info"></div>
+                <div class="skeleton-pagination-controls">
+                    <div class="skeleton-pagination-btn"></div>
+                    <div class="skeleton-pagination-btn"></div>
+                </div>
+            </div>
+
+            <!-- Real Pagination (hidden by default) -->
             <div class="pagination-container">
                 <div class="pagination-info">
                     Showing <?php echo min($limit, $totalCodes - $offset); ?> of <?php echo $totalCodes; ?> codes
                 </div>
                 <div class="pagination-controls">
                     <?php if ($page > 1): ?>
-                        <button class="pagination-btn" onclick="changePage(<?php echo $page - 1; ?>)">
+                        <button class="pagination-btn" onclick="changePageWithLoading(<?php echo $page - 1; ?>)">
                             ← Previous
                         </button>
                     <?php endif; ?>
                     
                     <?php if ($page < $totalPages): ?>
-                        <button class="pagination-btn" onclick="changePage(<?php echo $page + 1; ?>)">
+                        <button class="pagination-btn" onclick="changePageWithLoading(<?php echo $page + 1; ?>)">
                             Next →
                         </button>
                     <?php endif; ?>
