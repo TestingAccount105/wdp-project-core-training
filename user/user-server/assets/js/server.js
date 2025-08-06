@@ -836,9 +836,9 @@ function closeCreateChannelModal() {
 
 function createChannel() {
     // Get form data
-    const channelName = document.getElementById('channelName').value.trim();
+    const channelName = document.getElementById('channelNameInput').value;
     const channelType = document.querySelector('input[name="channelType"]:checked').value;
-    const channelDescription = document.getElementById('channelDescription').value.trim();
+    const channelDescription = document.getElementById('channelDescription').value;
     
     if (!channelName) {
         alert('Channel name is required');
@@ -851,9 +851,9 @@ function createChannel() {
     formData.append('name', channelName);
     formData.append('type', channelType);
     formData.append('description', channelDescription);
-    formData.append('server_id', currentServerId);
+    formData.append('serverId', currentServerId);
     
-    fetch('api/channel.php', {
+    fetch('api/channels.php', {
         method: 'POST',
         body: formData
     })
