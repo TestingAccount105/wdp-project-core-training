@@ -363,7 +363,6 @@
 				z-index: 2;
 			}
 
-			/* Scroll Indicator */
 			.scroll-indicator {
 				position: absolute;
 				bottom: 3rem;
@@ -430,7 +429,6 @@
 				}
 			}
 
-			/* Features Section with Particle Effects */
 			.features-section {
 				min-height: 100vh;
 				padding: 4rem 2rem;
@@ -461,13 +459,11 @@
 				overflow: hidden;
 			}
 
-			/* Feature Card Particle Background */
 			.card-particles {
 				position: absolute;
 				top: 0;
 				left: 0;
 				width: 100%;
-				/* height: 100%; */
 				pointer-events: none;
 				opacity: 0;
 				transition: opacity 0.3s ease;
@@ -710,7 +706,6 @@
 				font-size: 0.875rem;
 			}
 
-			/* Success Stories Section - Enhanced with Flip Animation */
 			.success-section {
 				min-height: 100vh;
 				padding: 4rem 2rem;
@@ -730,7 +725,6 @@
 				color: #ffffff;
 			}
 
-			/* Digital Book with Enhanced Flip Animation */
 			.digital-book {
 				perspective: 2000px;
 				position: relative;
@@ -792,7 +786,6 @@
 				z-index: 1;
 			}
 
-			/* Enhanced flip animation */
 			.book-page.page-flip-left {
 				animation: pageFlipLeft 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 			}
@@ -847,7 +840,6 @@
 				}
 			}
 
-			/* Single Stories Page Initially */
 			.stories-page {
 				display: flex;
 				flex-direction: column;
@@ -861,7 +853,6 @@
 				display: none;
 			}
 
-			/* Fixed Mirror effect for left page */
 			.book-page.left-page.opened .page-content {
 				transform: scaleX(-1);
 				display: flex;
@@ -915,7 +906,6 @@
 				font-size: 0.9rem;
 			}
 
-			/* MisVord Nitro Section - Fixed Hexagon Orbit */
 			.nitro-section {
 				min-height: 100vh;
 				padding: 4rem 2rem;
@@ -1007,7 +997,6 @@
 				z-index: 5;
 			}
 
-			/* Fixed hexagon hover behavior - only when center is hovered */
 			.nitro-center:hover ~ .hexagon {
 				animation-play-state: paused;
 				transform: scale(1.1) translateX(var(--expand-x)) translateY(var(--expand-y));
@@ -1028,7 +1017,6 @@
 				display: block;
 			}
 
-			/* Fixed Hexagon Positions for Proper Orbit */
 			.hexagon:nth-child(2) {
 				background: linear-gradient(135deg, #e91e63, #9c27b0);
 				animation-delay: 0s;
@@ -1343,7 +1331,6 @@
 					</div>
 				</div>
 
-				<!-- Server Manager Card -->
 				<div class="feature-card server-manager">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1381,7 +1368,6 @@
 					</div>
 				</div>
 
-				<!-- Friends Network Card -->
 				<div class="feature-card friends-network">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1419,7 +1405,6 @@
 					</div>
 				</div>
 
-				<!-- Server Explorer Card -->
 				<div class="feature-card server-explorer">
 					<div class="card-particles"></div>
 					<div class="card-header">
@@ -1461,7 +1446,6 @@
 			<div class="scroll-navigation">← Scroll to navigate →</div>
 		</div>
 
-		<!-- Success Stories Section - Enhanced with Flip Animation -->
 		<div class="success-section" id="successSection">
 			<div class="particles" id="particles2"></div>
 
@@ -1476,13 +1460,13 @@
 							<div class="page-text">Click to open and discover amazing community stories</div>
 						</div>
 						<div class="page-content" id="leftPageContent" style="display: none">
-							<!-- Content will be populated by JavaScript -->
+							
 						</div>
 					</div>
 
 					<div class="book-page right-page" id="rightPage" style="display: none" onclick="nextStory()">
 						<div class="page-content" id="rightPageContent">
-							<!-- Content will be populated by JavaScript -->
+						
 						</div>
 					</div>
 				</div>
@@ -1491,7 +1475,6 @@
 			<div class="scroll-navigation">← Scroll to navigate →</div>
 		</div>
 
-		<!-- MisVord Nitro Section - Fixed Hexagon Orbit -->
 		<div class="nitro-section" id="nitroSection">
 			<div class="particles" id="particles3"></div>
 
