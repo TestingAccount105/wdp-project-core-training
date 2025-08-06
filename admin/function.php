@@ -22,9 +22,9 @@ class AdminStats {
     }
     
     public function getNewUsers() {
-        // $query = "SELECT COUNT(*) as total FROM Users WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-        // $result = $this->conn->query($query);
-        return -1;
+        $query = "SELECT COUNT(*) as total FROM Users WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+        $result = $this->conn->query($query);
+        return $result->fetch_assoc()['total'];
     }
     
     public function getTotalServers() {
@@ -40,9 +40,9 @@ class AdminStats {
     }
     
     public function getTodayMessages() {
-        // $query = "SELECT COUNT(*) as total FROM Message WHERE DATE(SendAt) = CURDATE()";
-        // $result = $this->conn->query($query);
-        return -1;
+        $query = "SELECT COUNT(*) as total FROM Message WHERE DATE(SentAt) = CURDATE()";
+        $result = $this->conn->query($query);
+        return $result->fetch_assoc()['total'];
     }
     
     public function getChannelStats() {
