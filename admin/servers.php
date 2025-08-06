@@ -153,7 +153,7 @@ $totalPages = ceil($totalServers / $limit);
                     </a>
                 </div>
                 
-                <a href="logout.php" class="nav-item logout">
+                <a href="../auth/login.php" class="nav-item logout">
                     <span class="nav-icon">🚪</span>
                     <span class="nav-text">Log Out</span>
                 </a>
