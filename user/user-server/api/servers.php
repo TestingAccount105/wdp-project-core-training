@@ -3,6 +3,68 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 
+// Image upload handler function
+function handleImageUpload($file, $upload_dir) {
+    $debug_file = __DIR__ . '/server_debug.log';
+    file_put_contents($debug_file, "=== Image Upload Debug ===\n", FILE_APPEND);
+    file_put_contents($debug_file, "Upload dir: $upload_dir\n", FILE_APPEND);
+    file_put_contents($debug_file, "File info: " . json_encode($file) . "\n", FILE_APPEND);
+    
+    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $max_size = 5 * 1024 * 1024; // 5MB
+    
+    // Validate file type
+    if (!in_array($file['type'], $allowed_types)) {
+        $error = "Invalid file type: " . $file['type'];
+        error_log($error);
+        file_put_contents($debug_file, "ERROR: $error\n", FILE_APPEND);
+        return false;
+    }
+    
+    // Validate file size
+    if ($file['size'] > $max_size) {
+        $error = "File too large: " . $file['size'];
+        error_log($error);
+        file_put_contents($debug_file, "ERROR: $error\n", FILE_APPEND);
+        return false;
+    }
+    
+    // Create upload directory if it doesn't exist
+    $upload_path = __DIR__ . '/../../../uploads/' . $upload_dir;
+    file_put_contents($debug_file, "Upload path: $upload_path\n", FILE_APPEND);
+    
+    if (!is_dir($upload_path)) {
+        if (!mkdir($upload_path, 0755, true)) {
+            $error = "Failed to create upload directory: $upload_path";
+            error_log($error);
+            file_put_contents($debug_file, "ERROR: $error\n", FILE_APPEND);
+            return false;
+        }
+        file_put_contents($debug_file, "Created directory: $upload_path\n", FILE_APPEND);
+    }
+    
+    // Generate unique filename
+    $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = uniqid() . '_' . time() . '.' . $file_extension;
+    $full_path = $upload_path . '/' . $filename;
+    
+    file_put_contents($debug_file, "Generated filename: $filename\n", FILE_APPEND);
+    file_put_contents($debug_file, "Full path: $full_path\n", FILE_APPEND);
+    
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $full_path)) {
+        // Return relative path for database storage
+        $relative_path = '/uploads/' . $upload_dir . '/' . $filename;
+        file_put_contents($debug_file, "SUCCESS: File uploaded to $relative_path\n", FILE_APPEND);
+        return $relative_path;
+    } else {
+        $error = "Failed to move uploaded file to: $full_path";
+        error_log($error);
+        file_put_contents($debug_file, "ERROR: $error\n", FILE_APPEND);
+        return false;
+    }
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $user_id = validate_session();
 
@@ -103,12 +165,47 @@ function getServer($user_id) {
 function createServer($user_id) {
     global $mysqli, $server_categories;
     
+    // Create debug log file for tracking
+    $debug_file = __DIR__ . '/server_debug.log';
+    $debug_msg = "\n=== Server Creation Debug - " . date('Y-m-d H:i:s') . " ===\n";
+    file_put_contents($debug_file, $debug_msg, FILE_APPEND);
+    
+    // Debug logging
+    error_log("createServer called for user: " . $user_id);
+    file_put_contents($debug_file, "User ID: $user_id\n", FILE_APPEND);
+    error_log("POST data: " . json_encode($_POST));
+    file_put_contents($debug_file, "POST data: " . json_encode($_POST) . "\n", FILE_APPEND);
+    
     $name = sanitize_input($_POST['name'] ?? '');
     $description = sanitize_input($_POST['description'] ?? '');
     $category = sanitize_input($_POST['category'] ?? 'Other');
     $is_public = isset($_POST['isPublic']) ? (bool)$_POST['isPublic'] : false;
-    $icon_server = $_POST['iconServer'] ?? null;
-    $banner_server = $_POST['bannerServer'] ?? null;
+    
+    // Handle file uploads
+    $icon_server = null;
+    $banner_server = null;
+    
+    // Process server icon upload
+    if (isset($_FILES['iconServer']) && $_FILES['iconServer']['error'] === UPLOAD_ERR_OK) {
+        $icon_server = handleImageUpload($_FILES['iconServer'], 'server-icons');
+        if ($icon_server === false) {
+            send_response(['error' => 'Failed to upload server icon'], 400);
+            return;
+        }
+        file_put_contents($debug_file, "Icon uploaded: $icon_server\n", FILE_APPEND);
+    }
+    
+    // Process server banner upload
+    if (isset($_FILES['bannerServer']) && $_FILES['bannerServer']['error'] === UPLOAD_ERR_OK) {
+        $banner_server = handleImageUpload($_FILES['bannerServer'], 'server-banners');
+        if ($banner_server === false) {
+            send_response(['error' => 'Failed to upload server banner'], 400);
+            return;
+        }
+        file_put_contents($debug_file, "Banner uploaded: $banner_server\n", FILE_APPEND);
+    }
+    
+    error_log("Parsed data - name: $name, category: $category, description: $description");
     
     if (empty($name)) {
         send_response(['error' => 'Server name is required'], 400);
@@ -121,41 +218,115 @@ function createServer($user_id) {
     $mysqli->begin_transaction();
     
     try {
+        error_log("Starting database transaction");
+        
+        // Check all related tables for ID column issues
+        $debug_file = __DIR__ . '/server_debug.log';
+        $tables_to_check = ['Server', 'UserServerMemberships', 'Channel'];
+        
+        foreach ($tables_to_check as $table) {
+            error_log("=== Checking table: $table ===");
+            file_put_contents($debug_file, "=== Checking table: $table ===\n", FILE_APPEND);
+            
+            // Check table status and auto-increment
+            $check_stmt = $mysqli->prepare("SHOW TABLE STATUS LIKE '$table'");
+            $check_stmt->execute();
+            $table_status = $check_stmt->get_result()->fetch_assoc();
+            $auto_inc = $table_status['Auto_increment'] ?? 'null';
+            $engine = $table_status['Engine'] ?? 'unknown';
+            
+            error_log("$table auto-increment value: " . $auto_inc);
+            error_log("$table engine: " . $engine);
+            file_put_contents($debug_file, "$table auto-increment: $auto_inc, engine: $engine\n", FILE_APPEND);
+            
+            // Check table structure
+            $desc_stmt = $mysqli->prepare("DESCRIBE `$table`");
+            $desc_stmt->execute();
+            $columns = $desc_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            // Find ID column
+            foreach ($columns as $column) {
+                if (stripos($column['Field'], 'ID') !== false) {
+                    $col_info = json_encode($column);
+                    error_log("$table ID column ({$column['Field']}): " . $col_info);
+                    file_put_contents($debug_file, "$table ID column ({$column['Field']}): $col_info\n", FILE_APPEND);
+                }
+            }
+            
+            // Check current max ID value
+            $max_stmt = $mysqli->prepare("SELECT MAX(ID) as max_id FROM `$table`");
+            if ($max_stmt && $max_stmt->execute()) {
+                $max_result = $max_stmt->get_result()->fetch_assoc();
+                $max_id = $max_result['max_id'] ?? 'null';
+                error_log("$table current max ID: " . $max_id);
+                file_put_contents($debug_file, "$table current max ID: $max_id\n", FILE_APPEND);
+            }
+        }
+        
         // Create server
+        error_log("=== Attempting to insert into Server table ===");
         $stmt = $mysqli->prepare("
             INSERT INTO Server (Name, Description, Category, IconServer, BannerServer, IsPrivate) 
             VALUES (?, ?, ?, ?, ?, ?)
         ");
+        
+        if (!$stmt) {
+            throw new Exception("Prepare failed for Server insert: " . $mysqli->error);
+        }
+        
         $is_private = $is_public ? 0 : 1;
+        error_log("Binding parameters: name=$name, desc=$description, cat=$category, private=$is_private");
+        
         $stmt->bind_param("sssssi", $name, $description, $category, $icon_server, $banner_server, $is_private);
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            error_log("FAILED: Server table INSERT - Error: " . $stmt->error);
+            throw new Exception("Execute failed for Server insert: " . $stmt->error);
+        }
         
         $server_id = $mysqli->insert_id;
+        error_log("SUCCESS: Server created with ID: " . $server_id);
         
         // Add creator as owner
+        error_log("=== Attempting to insert into UserServerMemberships table ===");
         $stmt = $mysqli->prepare("
             INSERT INTO UserServerMemberships (UserID, ServerID, Role) 
-            VALUES (?, ?, 'Owner')
+            VALUES (?, ?, 'owner')
         ");
         $stmt->bind_param("ii", $user_id, $server_id);
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            error_log("FAILED: UserServerMemberships table INSERT - Error: " . $stmt->error);
+            throw new Exception("Failed to add owner membership: " . $stmt->error);
+        }
+        
+        error_log("SUCCESS: Owner membership added");
         
         // Create default channels
         $channels = [
-            ['general', 'Text'],
-            ['General', 'Voice']
+            ['general', 'text'],
+            ['General', 'voice']
         ];
         
-        foreach ($channels as $channel) {
+        foreach ($channels as $index => $channel) {
+            error_log("=== Attempting to insert channel " . ($index + 1) . " into Channel table ===");
             $stmt = $mysqli->prepare("
                 INSERT INTO Channel (ServerID, Name, Type) 
                 VALUES (?, ?, ?)
             ");
             $stmt->bind_param("iss", $server_id, $channel[0], $channel[1]);
-            $stmt->execute();
+            
+            if (!$stmt->execute()) {
+                error_log("FAILED: Channel table INSERT for {$channel[0]} - Error: " . $stmt->error);
+                throw new Exception("Failed to create channel {$channel[0]}: " . $stmt->error);
+            }
+            error_log("SUCCESS: Channel {$channel[0]} created");
         }
         
+        error_log("Default channels created");
+        
         $mysqli->commit();
+        error_log("Transaction committed successfully");
         
         send_response([
             'success' => true, 
@@ -164,8 +335,16 @@ function createServer($user_id) {
         ]);
     } catch (Exception $e) {
         $mysqli->rollback();
-        error_log("Error creating server: " . $e->getMessage());
-        send_response(['error' => 'Failed to create server'], 500);
+        $error_msg = "Error creating server: " . $e->getMessage() . "\nMySQL error: " . $mysqli->error;
+        error_log($error_msg);
+        
+        // Write detailed error to debug file
+        $debug_file = __DIR__ . '/server_debug.log';
+        file_put_contents($debug_file, "ERROR: " . $error_msg . "\n", FILE_APPEND);
+        file_put_contents($debug_file, "MySQL errno: " . $mysqli->errno . "\n", FILE_APPEND);
+        file_put_contents($debug_file, "Stack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        
+        send_response(['error' => 'Failed to create server: ' . $e->getMessage()], 500);
     }
 }
 

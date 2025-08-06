@@ -23,7 +23,7 @@
                                     <i class="fas fa-camera"></i>
                                     <span>Upload Icon</span>
                                 </div>
-                                <input type="file" id="serverIconInput" accept="image/*" style="display: none;">
+                                <input type="file" id="serverIconInput" name="iconServer" accept="image/*" style="display: none;">
                                 <button type="button" class="btn-secondary" onclick="document.getElementById('serverIconInput').click()">
                                     Choose File
                                 </button>
@@ -39,7 +39,7 @@
                                     <i class="fas fa-image"></i>
                                     <span>Upload Banner</span>
                                 </div>
-                                <input type="file" id="serverBannerInput" accept="image/*" style="display: none;">
+                                <input type="file" id="serverBannerInput" name="bannerServer" accept="image/*" style="display: none;">
                                 <button type="button" class="btn-secondary" onclick="document.getElementById('serverBannerInput').click()">
                                     Choose File
                                 </button>
@@ -49,14 +49,14 @@
                         <!-- Server Name -->
                         <div class="form-group">
                             <label for="serverNameInput">Server Name <span class="required">*</span></label>
-                            <input type="text" id="serverNameInput" placeholder="Enter server name" maxlength="100" required>
+                            <input type="text" id="serverNameInput" name="name" placeholder="Enter server name" maxlength="100" required>
                             <div class="form-error" id="serverNameError"></div>
                         </div>
 
                         <!-- Server Description -->
                         <div class="form-group">
                             <label for="serverDescriptionInput">Server Description</label>
-                            <textarea id="serverDescriptionInput" placeholder="Tell people what your server is about" maxlength="1000" rows="3"></textarea>
+                            <textarea id="serverDescriptionInput" name="description" placeholder="Tell people what your server is about" maxlength="1000" rows="3"></textarea>
                             <div class="character-count">
                                 <span id="descriptionCount">0</span>/1000
                             </div>
@@ -69,7 +69,7 @@
                         <!-- Category Selection -->
                         <div class="form-group">
                             <label for="serverCategory">Category <span class="required">*</span></label>
-                            <select id="serverCategory" required>
+                            <select id="serverCategory" name="category" required>
                                 <option value="">Select a category</option>
                                 <option value="Gaming">Gaming</option>
                                 <option value="Music">Music</option>
@@ -100,7 +100,7 @@
                                     <p class="form-description">Public servers can be discovered on the explore page</p>
                                 </div>
                                 <div class="toggle-switch">
-                                    <input type="checkbox" id="serverPublicToggle">
+                                    <input type="checkbox" id="serverPublicToggle" name="isPublic">
                                     <label for="serverPublicToggle" class="toggle-label">
                                         <span class="toggle-slider"></span>
                                     </label>

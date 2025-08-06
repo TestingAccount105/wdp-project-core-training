@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Server Image Upload</title>
+</head>
+<body>
+    <h1>Test Server Creation with Images</h1>
+    
+    <form enctype="multipart/form-data" method="POST" action="/user/user-server/api/servers.php">
+        <input type="hidden" name="action" value="createServer">
+        
+        <label>Server Name:</label>
+        <input type="text" name="name" value="Test Server" required><br><br>
+        
+        <label>Description:</label>
+        <textarea name="description">Test server description</textarea><br><br>
+        
+        <label>Category:</label>
+        <select name="category">
+            <option value="Gaming">Gaming</option>
+            <option value="Other">Other</option>
+        </select><br><br>
+        
+        <label>Server Icon:</label>
+        <input type="file" name="iconServer" accept="image/*"><br><br>
+        
+        <label>Server Banner:</label>
+        <input type="file" name="bannerServer" accept="image/*"><br><br>
+        
+        <label>Public:</label>
+        <input type="checkbox" name="isPublic" value="1"><br><br>
+        
+        <input type="submit" value="Create Server">
+    </form>
+</body>
+</html>

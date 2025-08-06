@@ -1,0 +1,223 @@
+
+=== Server Creation Debug - 2025-08-06 17:39:30 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:30 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:31 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:31 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:31 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:31 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:32 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:32 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:33 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:33 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:39:33 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+
+=== Server Creation Debug - 2025-08-06 17:40:22 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 2147483648, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+ERROR: Error creating server: Out of range value for column 'ID' at row 1
+MySQL error: 
+MySQL errno: 0
+Stack trace: #0 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(198): mysqli_stmt->execute()
+#1 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(17): createServer(211953495)
+#2 {main}
+
+=== Server Creation Debug - 2025-08-06 17:40:23 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 2147483648, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+ERROR: Error creating server: Out of range value for column 'ID' at row 1
+MySQL error: 
+MySQL errno: 0
+Stack trace: #0 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(198): mysqli_stmt->execute()
+#1 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(17): createServer(211953495)
+#2 {main}
+
+=== Server Creation Debug - 2025-08-06 17:40:24 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 2147483648, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+ERROR: Error creating server: Out of range value for column 'ID' at row 1
+MySQL error: 
+MySQL errno: 0
+Stack trace: #0 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(198): mysqli_stmt->execute()
+#1 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(17): createServer(211953495)
+#2 {main}
+
+=== Server Creation Debug - 2025-08-06 17:40:25 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 2147483648, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+ERROR: Error creating server: Out of range value for column 'ID' at row 1
+MySQL error: 
+MySQL errno: 0
+Stack trace: #0 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(198): mysqli_stmt->execute()
+#1 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(17): createServer(211953495)
+#2 {main}
+
+=== Server Creation Debug - 2025-08-06 17:40:25 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 2147483648, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+ERROR: Error creating server: Out of range value for column 'ID' at row 1
+MySQL error: 
+MySQL errno: 0
+Stack trace: #0 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(198): mysqli_stmt->execute()
+#1 C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api\servers.php(17): createServer(211953495)
+#2 {main}
+
+=== Server Creation Debug - 2025-08-06 17:43:30 ===
+User ID: 211953495
+POST data: {"name":"fef","description":"fewf","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Checking table: Server ===
+Server auto-increment: 1000, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 555
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 9, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 8
+=== Checking table: Channel ===
+Channel auto-increment: 101, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 1
+
+=== Server Creation Debug - 2025-08-06 17:51:35 ===
+User ID: 211953495
+POST data: {"name":"tajk","description":"tashj","category":"Music","isPublic":"on","action":"createServer"}
+=== Image Upload Debug ===
+Upload dir: server-icons
+File info: {"name":"takopi.png","full_path":"takopi.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\phpD4FB.tmp","error":0,"size":332887}
+Upload path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-icons
+Generated filename: 68937a07087bb_1754495495.png
+Full path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-icons/68937a07087bb_1754495495.png
+SUCCESS: File uploaded to /uploads/server-icons/68937a07087bb_1754495495.png
+Icon uploaded: /uploads/server-icons/68937a07087bb_1754495495.png
+=== Image Upload Debug ===
+Upload dir: server-banners
+File info: {"name":"takopi.png","full_path":"takopi.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\phpD4FC.tmp","error":0,"size":332887}
+Upload path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-banners
+Generated filename: 68937a0709738_1754495495.png
+Full path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-banners/68937a0709738_1754495495.png
+SUCCESS: File uploaded to /uploads/server-banners/68937a0709738_1754495495.png
+Banner uploaded: /uploads/server-banners/68937a0709738_1754495495.png
+=== Checking table: Server ===
+Server auto-increment: 1001, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 1000
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 1000, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 9
+=== Checking table: Channel ===
+Channel auto-increment: 103, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 102

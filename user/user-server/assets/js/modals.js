@@ -56,6 +56,62 @@ class ModalManager {
         nameInput.addEventListener('input', () => {
             this.validateServerName(nameInput);
         });
+        
+        // Bind image upload handlers
+        this.bindImageUploadHandlers();
+    }
+    
+    bindImageUploadHandlers() {
+        // Server icon upload
+        const iconInput = document.getElementById('serverIconInput');
+        const iconPreview = document.getElementById('serverIconPreview');
+        
+        if (iconInput && iconPreview) {
+            iconInput.addEventListener('change', (e) => {
+                this.handleImagePreview(e.target, iconPreview, 'icon');
+            });
+        }
+        
+        // Server banner upload
+        const bannerInput = document.getElementById('serverBannerInput');
+        const bannerPreview = document.getElementById('serverBannerPreview');
+        
+        if (bannerInput && bannerPreview) {
+            bannerInput.addEventListener('change', (e) => {
+                this.handleImagePreview(e.target, bannerPreview, 'banner');
+            });
+        }
+    }
+    
+    handleImagePreview(input, preview, type) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            serverApp.showToast('Please select a valid image file', 'error');
+            input.value = '';
+            return;
+        }
+        
+        // Validate file size (5MB max)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            serverApp.showToast('Image file size must be less than 5MB', 'error');
+            input.value = '';
+            return;
+        }
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (type === 'icon') {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Server Icon Preview" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">`;
+            } else if (type === 'banner') {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Server Banner Preview" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px;">`;
+            }
+        };
+        reader.readAsDataURL(file);
     }
 
     bindUserSettingsEvents() {
@@ -333,6 +389,7 @@ class ModalManager {
     // Create Server Modal
     async handleCreateServer(form) {
         const formData = new FormData(form);
+        formData.append('action', 'createServer');
         
         try {
             const response = await fetch('/user/user-server/api/servers.php', {
@@ -346,12 +403,34 @@ class ModalManager {
                 serverApp.showToast('Server created successfully!', 'success');
                 this.closeModal(form.closest('.modal'));
                 serverApp.loadUserServers();
+                form.reset();
+                // Reset image previews
+                this.resetImagePreviews();
             } else {
                 serverApp.showToast(data.error || 'Failed to create server', 'error');
             }
         } catch (error) {
             console.error('Error creating server:', error);
             serverApp.showToast('Failed to create server', 'error');
+        }
+    }
+    
+    resetImagePreviews() {
+        const iconPreview = document.getElementById('serverIconPreview');
+        const bannerPreview = document.getElementById('serverBannerPreview');
+        
+        if (iconPreview) {
+            iconPreview.innerHTML = `
+                <i class="fas fa-camera"></i>
+                <span>Upload Icon</span>
+            `;
+        }
+        
+        if (bannerPreview) {
+            bannerPreview.innerHTML = `
+                <i class="fas fa-image"></i>
+                <span>Upload Banner</span>
+            `;
         }
     }
 
