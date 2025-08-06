@@ -143,7 +143,7 @@ if (!empty($params)) {
 $query = "SELECT 
             n.ID,
             n.Code,
-            -- n.CreatedAt,
+            n.CreatedAt,
             u.Username,
             u.Discriminator,
             u.Email,
@@ -380,7 +380,7 @@ function generateNitroCode() {
                                         <?php echo $code['Status']; ?>
                                     </span>
                                 </td>
-                                <td class="created-date"><?php echo date('j/n/Y H:i:s', strtotime($code['Status'])); ?></td>
+                                <td class="created-date"><?php echo date('j/n/Y H:i:s', strtotime($code['CreatedAt'])); ?></td>
                                 <td class="actions">
                                     <button class="action-btn copy-btn" data-code="<?php echo htmlspecialchars($code['Code']); ?>" title="Copy Code">
                                         📋

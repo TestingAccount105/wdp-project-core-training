@@ -195,7 +195,7 @@ function generateCode() {
             }
         },
         error: function() {
-            showToast('Failed to generate code. Please try again.', 'error');
+            showToast('Failed to generate code. Please try again...', 'error');
         },
         complete: function() {
             btn.prop('disabled', false).text('Generate Code');
