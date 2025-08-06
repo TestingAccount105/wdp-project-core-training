@@ -16,12 +16,53 @@ if (isset($_SESSION['register_data'])) {
     $current_step = 2;
 }
 
+// Password strength validation function - matches JavaScript calculation
+function validatePasswordStrength($password) {
+    $score = 0;
+    
+    // Length: 4 points per character (max 40 points)
+    $lengthScore = min(strlen($password) * 4, 40);
+    $score += $lengthScore;
+    
+    // Uppercase Letter: +15 points (if at least one exists)
+    if (preg_match('/[A-Z]/', $password)) {
+        $score += 15;
+    }
+    
+    // Lowercase Letter: +10 points (if at least one exists)
+    if (preg_match('/[a-z]/', $password)) {
+        $score += 10;
+    }
+    
+    // Digit (0-9): +15 points (if at least one exists)
+    if (preg_match('/[0-9]/', $password)) {
+        $score += 15;
+    }
+    
+    // Special Character (non-alphanumeric): +20 points (if at least one exists)
+    if (preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $score += 20;
+    }
+    
+    // Cap at 100%
+    $score = min($score, 100);
+    
+    // Also return individual checks for display
+    $checks = [
+        'length' => strlen($password) >= 8,
+        'lowercase' => preg_match('/[a-z]/', $password),
+        'uppercase' => preg_match('/[A-Z]/', $password),
+        'special' => preg_match('/[0-9]/', $password) || preg_match('/[^a-zA-Z0-9]/', $password)
+    ];
+    
+    return ['score' => $score, 'checks' => $checks];
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    var_dump($_POST);
     $database = new Database();
     $db = $database->getConnection();
-    echo "Success";
+    
     // Registration Step 1 Handler
     if (isset($_POST['register_step1'])) {
         $username = trim($_POST['username']);
@@ -33,27 +74,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $error = 'All fields are required.';
         } elseif ($password !== $confirm_password) {
             $error = 'Passwords do not match.';
-        } elseif (strlen($password) < 6) {
-            $error = 'Password must be at least 6 characters long.';
+        } elseif (strlen($password) < 8) {
+            $error = 'Password must be at least 8 characters long.';
         } else {
-            $query = "SELECT ID FROM Users WHERE Username = ? OR Email = ?";
-            $stmt = $db->prepare($query);
-            $stmt->bind_param('ss', $username, $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            if ($result->fetch_assoc()) {
-                $error = 'Username or email already exists.';
+            // Validate password strength
+            $passwordStrength = validatePasswordStrength($password);
+            if ($passwordStrength['score'] < 100) {
+                $error = 'Password must meet all strength requirements (100% strength required).';
             } else {
-                // Store registration data in session for step 2
-                $_SESSION['register_data'] = [
-                    'username' => $username,
-                    'email' => $email,
-                    'password' => $password
-                ];
-                $success = 'Step 1 completed! Please set up your security question.';
-                $show_step_2 = true;
-                $current_step = 2;
+                $query = "SELECT ID FROM Users WHERE Username = ? OR Email = ?";
+                $stmt = $db->prepare($query);
+                $stmt->bind_param('ss', $username, $email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->fetch_assoc()) {
+                    $error = 'Username or email already exists.';
+                } else {
+                    // Store registration data in session for step 2
+                    $_SESSION['register_data'] = [
+                        'username' => $username,
+                        'email' => $email,
+                        'password' => $password
+                    ];
+                    $success = 'Step 1 completed! Please set up your security question.';
+                    $show_step_2 = true;
+                    $current_step = 2;
+                }
             }
         }
     }
@@ -123,9 +170,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Check if we should show step 2 based on session data (for page refresh)
-// This is already handled above, so we can remove this duplicate check
-
 // Generate CAPTCHA
 function generateCaptcha() {
     $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -147,6 +191,99 @@ $captcha = generateCaptcha();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Create Account</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Fix scrolling issues */
+        body {
+            min-height: 100vh;
+            height: auto !important;
+            overflow-y: auto;
+        }
+        
+        .auth-container {
+            min-height: 100vh !important;
+            height: auto !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box;
+        }
+        
+        .auth-container .page {
+            width: 100%;
+            max-width: 400px;
+            height: auto !important;
+            min-height: auto !important;
+        }
+        
+        .password-requirements {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .requirement {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .requirement.met {
+            color: #4ade80;
+        }
+        
+        .requirement-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            font-size: 10px;
+        }
+        
+        .requirement.met .requirement-icon {
+            background: #4ade80;
+            color: white;
+        }
+        
+        .btn-primary:disabled {
+            background: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .strength-text.complete {
+            color: #4ade80 !important;
+            font-weight: bold;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-height: 800px) {
+            .auth-container {
+                align-items: flex-start !important;
+                padding-top: 40px !important;
+            }
+        }
+        
+        @media (max-height: 600px) {
+            .auth-container {
+                padding: 20px 0 !important;
+            }
+            
+            .logo {
+                margin-bottom: 20px !important;
+            }
+            
+            .auth-title {
+                margin-bottom: 20px !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="auth-container">
@@ -196,6 +333,25 @@ $captcha = generateCaptcha();
                         </div>
                         <div class="password-strength" id="password-strength"><div class="strength-bar" id="strength-bar"></div></div>
                         <div class="strength-text" id="strength-text">0%</div>
+                        
+                        <div class="password-requirements" id="password-requirements">
+                            <div class="requirement" id="req-length">
+                                <span class="requirement-icon">✗</span>
+                                <span>At least 8 characters</span>
+                            </div>
+                            <div class="requirement" id="req-lowercase">
+                                <span class="requirement-icon">✗</span>
+                                <span>One lowercase letter (a-z)</span>
+                            </div>
+                            <div class="requirement" id="req-uppercase">
+                                <span class="requirement-icon">✗</span>
+                                <span>One uppercase letter (A-Z)</span>
+                            </div>
+                            <div class="requirement" id="req-special">
+                                <span class="requirement-icon">✗</span>
+                                <span>One number or special character</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirm Password</label>
@@ -205,7 +361,7 @@ $captcha = generateCaptcha();
                         </div>
                     </div>
                     <input type="hidden" name="register_step1" value="1">
-                    <button type="submit" name="register_step1" class="btn-primary">Next Step →</button>
+                    <button type="submit" name="register_step1" class="btn-primary" id="next-step-btn" disabled>Next Step →</button>
                 </form>
                 <div class="divider"><span>OR</span></div>
                 <a href="google-login.php" class="btn-google"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Sign up with Google</a>
@@ -266,6 +422,193 @@ $captcha = generateCaptcha();
                 body: 'clear_registration=1'
             }).then(() => {
                 window.location.href = 'register.php';
+            });
+        }
+
+        // Enhanced password strength checker - matches auth.js calculation
+        function checkPasswordStrength(password) {
+            let score = 0;
+            
+            // Length: 4 points per character (max 40 points)
+            const lengthScore = Math.min(password.length * 4, 40);
+            score += lengthScore;
+            
+            // Uppercase Letter: +15 points (if at least one exists)
+            if (/[A-Z]/.test(password)) {
+                score += 15;
+            }
+            
+            // Lowercase Letter: +10 points (if at least one exists)
+            if (/[a-z]/.test(password)) {
+                score += 10;
+            }
+            
+            // Digit (0-9): +15 points (if at least one exists)
+            if (/[0-9]/.test(password)) {
+                score += 15;
+            }
+            
+            // Special Character (non-alphanumeric): +20 points (if at least one exists)
+            if (/[^a-zA-Z0-9]/.test(password)) {
+                score += 20;
+            }
+            
+            // Cap at 100%
+            score = Math.min(score, 100);
+            
+            // Update individual requirement indicators
+            const requirements = {
+                length: password.length >= 8,
+                lowercase: /[a-z]/.test(password),
+                uppercase: /[A-Z]/.test(password),
+                special: /[0-9]/.test(password) && /[^a-zA-Z0-9]/.test(password)
+            };
+            
+            // Update requirement indicators
+            Object.keys(requirements).forEach(req => {
+                const element = document.getElementById(`req-${req}`);
+                if (element) {
+                    const icon = element.querySelector('.requirement-icon');
+                    if (requirements[req]) {
+                        element.classList.add('met');
+                        icon.textContent = '✓';
+                    } else {
+                        element.classList.remove('met');
+                        icon.textContent = '✗';
+                    }
+                }
+            });
+            
+            // Update strength bar and text
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+            const nextBtn = document.getElementById('next-step-btn');
+            
+            if (strengthBar) strengthBar.style.width = score + '%';
+            if (strengthText) strengthText.textContent = score + '%';
+            
+            // Update colors based on score - matches auth.js colors
+            if (score < 30) {
+                if (strengthBar) strengthBar.style.background = '#ef4444'; // Red
+                if (strengthText) {
+                    strengthText.style.color = '#ef4444';
+                    strengthText.classList.remove('complete');
+                }
+                if (nextBtn) nextBtn.disabled = true;
+            } else if (score < 50) {
+                if (strengthBar) strengthBar.style.background = '#f97316'; // Orange
+                if (strengthText) {
+                    strengthText.style.color = '#f97316';
+                    strengthText.classList.remove('complete');
+                }
+                if (nextBtn) nextBtn.disabled = true;
+            } else if (score < 70) {
+                if (strengthBar) strengthBar.style.background = '#eab308'; // Yellow
+                if (strengthText) {
+                    strengthText.style.color = '#eab308';
+                    strengthText.classList.remove('complete');
+                }
+                if (nextBtn) nextBtn.disabled = true;
+            } else if (score < 90) {
+                if (strengthBar) strengthBar.style.background = '#22c55e'; // Light Green
+                if (strengthText) {
+                    strengthText.style.color = '#22c55e';
+                    strengthText.classList.remove('complete');
+                }
+                if (nextBtn) nextBtn.disabled = true;
+            } else if (score >= 100) {
+                if (strengthBar) strengthBar.style.background = '#16a34a'; // Dark Green
+                if (strengthText) {
+                    strengthText.style.color = '#16a34a';
+                    strengthText.classList.add('complete');
+                }
+                if (nextBtn) nextBtn.disabled = false;
+            } else {
+                if (strengthBar) strengthBar.style.background = '#22c55e'; // Light Green
+                if (strengthText) {
+                    strengthText.style.color = '#22c55e';
+                    strengthText.classList.remove('complete');
+                }
+                if (nextBtn) nextBtn.disabled = true;
+            }
+            
+            return score === 100;
+        }
+
+        // Add event listener to password input
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('register-password');
+            const confirmPasswordInput = document.getElementById('confirm-password');
+            const form = document.getElementById('register-form');
+            
+            if (passwordInput) {
+                passwordInput.addEventListener('input', function() {
+                    checkPasswordStrength(this.value);
+                });
+                
+                // Check password match
+                function checkPasswordMatch() {
+                    const nextBtn = document.getElementById('next-step-btn');
+                    if (confirmPasswordInput.value && passwordInput.value !== confirmPasswordInput.value) {
+                        confirmPasswordInput.setCustomValidity('Passwords do not match');
+                        confirmPasswordInput.style.borderColor = '#ef4444';
+                        if (nextBtn) nextBtn.disabled = true;
+                    } else {
+                        confirmPasswordInput.setCustomValidity('');
+                        confirmPasswordInput.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                        // Re-check if password strength is 100%
+                        if (checkPasswordStrength(passwordInput.value)) {
+                            if (nextBtn) nextBtn.disabled = false;
+                        }
+                    }
+                }
+                
+                if (confirmPasswordInput) {
+                    confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+                    passwordInput.addEventListener('input', checkPasswordMatch);
+                }
+            }
+            
+            // Form submission validation
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const password = passwordInput.value;
+                    const confirmPassword = confirmPasswordInput.value;
+                    
+                    if (!checkPasswordStrength(password)) {
+                        e.preventDefault();
+                        alert('Password must reach 100% strength to proceed.');
+                        return false;
+                    }
+                    
+                    if (password !== confirmPassword) {
+                        e.preventDefault();
+                        alert('Passwords do not match.');
+                        return false;
+                    }
+                });
+            }
+        });
+
+        // Existing toggle password function (assuming it exists in auth.js)
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+        }
+
+        // Existing refresh captcha function (assuming it exists)
+        function refreshCaptcha() {
+            fetch('register.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'refresh_captcha=1'
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('captcha-text-register').textContent = data;
             });
         }
     </script>
