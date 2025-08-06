@@ -1183,12 +1183,14 @@
 	<body>
 		<div class="hero-section">
 			<div class="login-container">
-				<div class="login-btn">
-					<svg viewBox="0 0 24 24">
-						<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-					</svg>
-					<div class="login-tooltip">Login to MisVord</div>
-				</div>
+				<a href="auth/login.php">
+					<div class="login-btn">
+						<svg viewBox="0 0 24 24">
+							<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+						</svg>
+						<div class="login-tooltip">Login to MisVord</div>
+					</div>
+				</a>
 			</div>
 
 			<div class="floating-elements">
@@ -1966,7 +1968,7 @@
 
 				pauseHexagonAnimation() {
 					this.hexagons.forEach((hexagon) => {
-						hexagon.style.animationPlayState = "paused";
+						hexagon.style.animationPlayState = "paused";	
 					});
 				}
 
@@ -1985,9 +1987,6 @@
 				new NitroInteractive();
 			});
 
-			document.querySelector(".login-btn").addEventListener("click", function () {
-				alert("Login functionality would be implemented here!");
-			});
 		</script>
 	</body>
 </html>
