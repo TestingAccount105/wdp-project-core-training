@@ -39,10 +39,12 @@ $username = $_SESSION['username'] ?? 'Guest';
                         <i class="fas fa-user-friends"></i>
                         <span>Friends</span>
                     </div>
-                    <div class="nav-tab" data-tab="nitro">
-                        <i class="fas fa-bolt"></i>
-                        <span>Nitro</span>
-                    </div>
+                    <a href="../nitro/nitro.php">
+                        <div class="nav-tab" data-tab="nitro">
+                            <i class="fas fa-bolt"></i>
+                            <span>Nitro</span>
+                        </div>
+                    </a>
                 </div>
 
                 <!-- Direct Messages Section -->
