@@ -151,16 +151,8 @@ $serverStats = $stats->getServerStats();
     <script src="admin.js"></script>
     <script src="chart.js"></script>
     <script>
-        // Initialize charts with real data
-        const channelData = <?php echo json_encode($channelStats); ?>;
-        const serverData = <?php echo json_encode($serverStats); ?>;
-        const messageData = {
-            total: <?php echo $totalMessages; ?>,
-            today: <?php echo $todayMessages; ?>,
-            remaining: <?php echo $totalMessages - $todayMessages; ?>
-        };
-        
-        initializeCharts(channelData, messageData, serverData);
+        // Chart data is now loaded asynchronously through chart.js
+        // with skeleton loading for better user experience
     </script>
 </body>
 </html>

@@ -168,6 +168,7 @@ async function initializeChannelChart() {
     });
 }
 
+
 // Initialize Message Statistics Chart
 async function initializeMessageChart() {
     const messageData = await fetchChartData('messages');
@@ -291,28 +292,31 @@ function destroyAllCharts() {
     });
 }
 
-// Initialize all charts
+// Initialize all charts with skeleton loading
 async function initializeAllCharts() {
     try {
-        console.log('Initializing charts...');
+        console.log('Initializing charts with skeleton loading...');
         
-        // Show loading indicators
-        showLoadingIndicators();
+        // Show skeleton loading immediately
+        showSkeletonLoading();
         
-        // Destroy existing charts first
+        // Wait for 3 seconds to simulate loading time
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Destroy existing charts (including skeleton charts)
         destroyAllCharts();
         
-        // Initialize all charts concurrently
+        // Initialize all charts concurrently with real data
         await Promise.all([
             initializeChannelChart(),
             initializeMessageChart(),
             initializeServerChart()
         ]);
         
-        // Hide loading indicators
-        hideLoadingIndicators();
+        // Hide skeleton loading
+        hideSkeletonLoading();
         
-        console.log('All charts initialized successfully');
+        console.log('All charts initialized successfully with real data');
     } catch (error) {
         console.error('Error initializing charts:', error);
         hideLoadingIndicators();
@@ -320,79 +324,286 @@ async function initializeAllCharts() {
     }
 }
 
-// Show loading indicators
-function showLoadingIndicators() {
-    const chartContainers = document.querySelectorAll('.chart-container');
-    chartContainers.forEach(container => {
-        const canvas = container.querySelector('canvas');
-        if (canvas) {
-            canvas.style.opacity = '0.5';
+// Create skeleton loading for charts
+function createSkeletonChart(canvasId, type = 'bar') {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Create skeleton data based on chart type with more realistic variations
+    let skeletonData;
+    if (canvasId === 'channelChart') {
+        skeletonData = {
+            labels: ['Categories', 'Text Channels', 'Voice Channels'],
+            datasets: [{
+                data: [12, 18, 8],
+                backgroundColor: ['#f0f0f0', '#e8e8e8', '#f0f0f0'],
+                borderColor: ['#e0e0e0', '#d8d8d8', '#e0e0e0'],
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        };
+    } else if (canvasId === 'messageChart') {
+        skeletonData = {
+            labels: ['Total Messages', "Today's Messages", 'Previous Messages'],
+            datasets: [{
+                data: [1850, 124, 1726],
+                backgroundColor: ['#f0f0f0', '#e8e8e8', '#f0f0f0'],
+                borderColor: ['#e0e0e0', '#d8d8d8', '#e0e0e0'],
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        };
+    } else if (canvasId === 'serverChart') {
+        skeletonData = {
+            labels: ['Public Servers', 'Private Servers'],
+            datasets: [{
+                data: [7, 4],
+                backgroundColor: ['#f0f0f0', '#e8e8e8'],
+                borderColor: ['#e0e0e0', '#d8d8d8'],
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        };
+    }
+    
+    // Create skeleton chart with disabled interactions and better styling
+    const skeletonChart = new Chart(ctx, {
+        type: type,
+        data: skeletonData,
+        options: {
+            ...chartOptions,
+            animation: {
+                duration: 0 // No animation for skeleton
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false // Disable tooltips for skeleton
+                }
+            },
+            interaction: {
+                events: [] // Disable all interactions
+            },
+            hover: {
+                mode: null // Disable hover effects
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#d0d0d0',
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    },
+                    grid: {
+                        color: '#f0f0f0'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#d0d0d0',
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
         }
-        
-        // Remove existing loading indicator
-        const existingLoader = container.querySelector('.chart-loading');
-        if (existingLoader) {
-            existingLoader.remove();
-        }
-        
-        // Add loading spinner
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'chart-loading';
-        loadingDiv.innerHTML = `
-            <div style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #3498db;
-                font-size: 14px;
-                text-align: center;
-                z-index: 10;
-            ">
-                <div style="
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid #34495e;
-                    border-top: 2px solid #3498db;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    margin: 0 auto 10px;
-                "></div>
-                Loading chart data...
-            </div>
-        `;
-        container.style.position = 'relative';
-        container.appendChild(loadingDiv);
     });
     
-    // Add CSS animation for spinner
-    if (!document.getElementById('spinner-style')) {
+    // Add improved skeleton overlay with multiple shimmer effects
+    const container = canvas.parentElement;
+    
+    // Create main shimmer overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'skeleton-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 20%,
+            rgba(255, 255, 255, 0.6) 50%,
+            rgba(255, 255, 255, 0.4) 80%,
+            transparent 100%
+        );
+        animation: shimmer 2s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 5;
+        border-radius: 8px;
+    `;
+    
+    // Create pulsing overlay for additional effect
+    const pulseOverlay = document.createElement('div');
+    pulseOverlay.className = 'skeleton-pulse';
+    pulseOverlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.1);
+        animation: pulse 1.5s ease-in-out infinite alternate;
+        pointer-events: none;
+        z-index: 4;
+        border-radius: 8px;
+    `;
+    
+    // Add loading indicator
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.className = 'skeleton-loading-text';
+    loadingIndicator.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #999;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+        z-index: 6;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 8px 16px;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(4px);
+        animation: loadingText 1.5s ease-in-out infinite;
+    `;
+    loadingIndicator.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="
+                width: 12px;
+                height: 12px;
+                border: 2px solid #ddd;
+                border-top: 2px solid #666;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            "></div>
+            Loading...
+        </div>
+    `;
+    
+    container.style.position = 'relative';
+    container.appendChild(pulseOverlay);
+    container.appendChild(overlay);
+    container.appendChild(loadingIndicator);
+    
+    return skeletonChart;
+}
+
+// Show skeleton loading indicators
+function showSkeletonLoading() {
+    // Add enhanced skeleton animation CSS if not exists
+    if (!document.getElementById('skeleton-style')) {
         const style = document.createElement('style');
-        style.id = 'spinner-style';
+        style.id = 'skeleton-style';
         style.textContent = `
+            @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            
+            @keyframes pulse {
+                0% { opacity: 0.1; }
+                100% { opacity: 0.3; }
+            }
+            
+            @keyframes loadingText {
+                0%, 100% { opacity: 0.7; }
+                50% { opacity: 1; }
+            }
+            
             @keyframes spin {
-                0% { transform: translate(-50%, -50%) rotate(0deg); }
-                100% { transform: translate(-50%, -50%) rotate(360deg); }
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            .skeleton-overlay {
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.4) 20%,
+                    rgba(255, 255, 255, 0.6) 50%,
+                    rgba(255, 255, 255, 0.4) 80%,
+                    transparent 100%
+                ) !important;
+            }
+            
+            .chart-container {
+                transition: all 0.3s ease-in-out;
+            }
+            
+            .chart-container.skeleton-loading {
+                background: rgba(255, 255, 255, 0.4);
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                overflow: hidden;
             }
         `;
         document.head.appendChild(style);
     }
+    
+    // Add skeleton loading class to containers
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+        container.classList.add('skeleton-loading');
+    });
+    
+    // Create skeleton charts
+    chartInstances.channelChart = createSkeletonChart('channelChart');
+    chartInstances.messageChart = createSkeletonChart('messageChart');
+    chartInstances.serverChart = createSkeletonChart('serverChart');
+}
+
+// Hide skeleton loading
+function hideSkeletonLoading() {
+    // Remove skeleton overlays and loading indicators with fade effect
+    const overlays = document.querySelectorAll('.skeleton-overlay');
+    const pulseOverlays = document.querySelectorAll('.skeleton-pulse');
+    const loadingTexts = document.querySelectorAll('.skeleton-loading-text');
+    
+    // Fade out effect
+    [...overlays, ...pulseOverlays, ...loadingTexts].forEach(element => {
+        element.style.transition = 'opacity 0.3s ease-out';
+        element.style.opacity = '0';
+        setTimeout(() => {
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+        }, 300);
+    });
+    
+    // Remove skeleton loading class from containers
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+        setTimeout(() => {
+            container.classList.remove('skeleton-loading');
+        }, 300);
+    });
+}
+
+// Show loading indicators (legacy function, now shows skeleton)
+function showLoadingIndicators() {
+    showSkeletonLoading();
 }
 
 // Hide loading indicators
 function hideLoadingIndicators() {
-    const chartContainers = document.querySelectorAll('.chart-container');
-    chartContainers.forEach(container => {
-        const canvas = container.querySelector('canvas');
-        if (canvas) {
-            canvas.style.opacity = '1';
-        }
-        
-        const loadingDiv = container.querySelector('.chart-loading');
-        if (loadingDiv) {
-            loadingDiv.remove();
-        }
-    });
+    hideSkeletonLoading();
 }
 
 // Show error message
@@ -428,21 +639,21 @@ function showErrorMessage(message) {
 }
 
 // Refresh chart data
-async function refreshChartData() {
-    const refreshButton = document.getElementById('refresh-charts');
-    if (refreshButton) {
-        refreshButton.disabled = true;
-        refreshButton.textContent = 'Refreshing...';
-    }
+// async function refreshChartData() {
+//     const refreshButton = document.getElementById('refresh-charts');
+//     if (refreshButton) {
+//         refreshButton.disabled = true;
+//         refreshButton.textContent = 'Refreshing...';
+//     }
     
-    // Reinitialize charts (destroyAllCharts is called within initializeAllCharts)
-    await initializeAllCharts();
+//     // Reinitialize charts (destroyAllCharts is called within initializeAllCharts)
+//     await initializeAllCharts();
     
-    if (refreshButton) {
-        refreshButton.disabled = false;
-        refreshButton.textContent = 'Refresh Charts';
-    }
-}
+//     if (refreshButton) {
+//         refreshButton.disabled = false;
+//         refreshButton.textContent = 'Refresh Charts';
+//     }
+// }
 
 // Mobile sidebar toggle
 function toggleSidebar() {
