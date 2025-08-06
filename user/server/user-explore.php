@@ -34,10 +34,11 @@ if (isset($_POST['action'])) {
             $types .= "ss";
         }
         
-        // Fix category filtering (if you want to implement it properly)
+        // Fix category filtering - now using actual Category column
         if ($category !== 'all' && !empty($category)) {
-            // For now, since there's no category column, we'll skip this
-            // You could add a Category column to your Server table or implement tag-based filtering
+            $whereClause .= " AND s.Category = ?";
+            $params[] = $category;
+            $types .= "s";
         }
         
         // Build ORDER BY clause
@@ -65,7 +66,7 @@ if (isset($_POST['action'])) {
                 $orderClause = "ORDER BY s.Name ASC";
         }
         
-        // Get servers with member count
+        // Get servers with member count and category
         $query = "SELECT 
                     s.ID,
                     s.Name,
@@ -73,13 +74,14 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
+                    s.Category,
                     COUNT(DISTINCT usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
                   LEFT JOIN UserServerMemberships usm_current ON s.ID = usm_current.ServerID AND usm_current.UserID = ?
                   $whereClause
-                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, usm_current.UserID
+                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, s.Category, usm_current.UserID
                   $orderClause
                   LIMIT $limit OFFSET $offset";
         
@@ -113,7 +115,7 @@ if (isset($_POST['action'])) {
                 'InviteLink' => $row['InviteLink'] ?? '',
                 'member_count' => (int)($row['member_count'] ?? 0),
                 'is_joined' => (int)($row['is_joined'] ?? 0),
-                'Category' => 'General' // Default category since it's not in your schema
+                'Category' => $row['Category'] ?? 'General'
             ];
             $servers[] = $server;
         }
@@ -128,16 +130,28 @@ if (isset($_POST['action'])) {
         $result = $conn->query($query);
         $totalServers = $result ? $result->fetch_assoc()['total_servers'] : 0;
         
-        // Since there's no category column, create mock categories
-        // You should add a Category column to your Server table for real implementation
-        $categories = [
-            ['Category' => 'Gaming', 'server_count' => 2],
-            ['Category' => 'Music', 'server_count' => 1],
-            ['Category' => 'Education', 'server_count' => 1],
-            ['Category' => 'Science & Tech', 'server_count' => 1],
-            ['Category' => 'Entertainment', 'server_count' => 0],
-            ['Category' => 'Community', 'server_count' => 0]
-        ];
+        // Get actual categories from database with server counts
+        $categoryQuery = "SELECT 
+                            s.Category,
+                            COUNT(*) as server_count
+                          FROM Server s 
+                          WHERE s.IsPrivate = 0 
+                            AND s.Category IS NOT NULL 
+                            AND s.Category != ''
+                          GROUP BY s.Category
+                          ORDER BY server_count DESC, s.Category ASC";
+        
+        $categoryResult = $conn->query($categoryQuery);
+        $categories = [];
+        
+        if ($categoryResult) {
+            while ($row = $categoryResult->fetch_assoc()) {
+                $categories[] = [
+                    'Category' => $row['Category'],
+                    'server_count' => (int)$row['server_count']
+                ];
+            }
+        }
         
         echo json_encode([
             'categories' => $categories,
@@ -156,13 +170,14 @@ if (isset($_POST['action'])) {
                     s.Description,
                     s.BannerServer,
                     s.InviteLink,
+                    s.Category,
                     COUNT(DISTINCT usm.UserID) as member_count,
                     CASE WHEN usm_current.UserID IS NOT NULL THEN 1 ELSE 0 END as is_joined
                   FROM Server s
                   LEFT JOIN UserServerMemberships usm ON s.ID = usm.ServerID
                   LEFT JOIN UserServerMemberships usm_current ON s.ID = usm_current.ServerID AND usm_current.UserID = ?
                   WHERE s.ID = ? AND s.IsPrivate = 0
-                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, usm_current.UserID";
+                  GROUP BY s.ID, s.Name, s.IconServer, s.Description, s.BannerServer, s.InviteLink, s.Category, usm_current.UserID";
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param("ii", $currentUserId, $serverId);

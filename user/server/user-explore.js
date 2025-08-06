@@ -8,6 +8,7 @@ let currentSort = "a_to_z"
 let currentServerId = null
 let allServersFromDB = [] // Store all servers from database
 let displayedServersCount = 0 // Track how many servers we've displayed
+let endOfDBReached = false // Track if we've reached the end of database servers
 const $ = window.jQuery // Declare the $ variable
 
 // Initialize page
@@ -23,6 +24,7 @@ $(document).ready(() => {
     console.log("allServersFromDB:", allServersFromDB.length)
     console.log("displayedServersCount:", displayedServersCount)
     console.log("currentPage:", currentPage)
+    console.log("endOfDBReached:", endOfDBReached)
     duplicateServers()
   })
 })
@@ -105,38 +107,9 @@ function initializeEventListeners() {
     }
   })
 
-  // Auto-trigger duplication when user reaches bottom of page
+  // SINGLE scroll handler for infinite scrolling
   $(window).on("scroll", throttle(() => {
-    const scrollTop = $(window).scrollTop()
-    const windowHeight = $(window).height()
-    const documentHeight = $(document).height()
-    const distanceFromBottom = documentHeight - (scrollTop + windowHeight)
-    
-    // Debug scroll position when getting close to bottom
-    if (distanceFromBottom < 50) {
-      console.log(`Scroll position - Distance from bottom: ${distanceFromBottom}px`)
-      console.log(`ScrollTop: ${scrollTop}, WindowHeight: ${windowHeight}, DocumentHeight: ${documentHeight}`)
-    }
-    
-    // Trigger when user is at the very bottom (within 5px for better reliability)
-    if (distanceFromBottom <= 5 && !isLoading && hasMoreServers && allServersFromDB.length > 0) {
-      console.log("🎯 User reached bottom - Auto-triggering duplication...")
-      console.log("Current page:", currentPage)
-      console.log("Servers from DB:", allServersFromDB.length)
-      console.log("Displayed count:", displayedServersCount)
-      
-      // Always trigger duplication when user reaches bottom
-      console.log("🔄 Triggering server duplication from scroll...")
-      isLoading = true
-      $("#loadingIndicator").show()
-      
-      // Use setTimeout to simulate loading and prevent rapid fire
-      setTimeout(() => {
-        duplicateServers()
-        isLoading = false
-        $("#loadingIndicator").hide()
-      }, 300)
-    }
+    handleInfiniteScroll()
   }, 100)) // Throttle scroll events
 
   // Keyboard shortcuts
@@ -147,16 +120,29 @@ function initializeEventListeners() {
   })
 }
 
-function isAtPageBottom() {
-  return (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 1);
-}
-
-window.addEventListener('scroll', () => {
-  if (isAtPageBottom()) {
-    console.log("User is at the bottom of the page.");
-    duplicateServers();
+// Handle infinite scrolling logic
+function handleInfiniteScroll() {
+  const scrollTop = $(window).scrollTop()
+  const windowHeight = $(window).height()
+  const documentHeight = $(document).height()
+  const distanceFromBottom = documentHeight - (scrollTop + windowHeight)
+  
+  // Only trigger when user is VERY close to bottom (within 10px) and actually scrolling
+  if (distanceFromBottom <= 10 && !isLoading && hasMoreServers && scrollTop > 0) {
+    console.log("🎯 User reached bottom - Triggering load...")
+    console.log(`Scroll details: scrollTop=${scrollTop}, distanceFromBottom=${distanceFromBottom}`)
+    
+    if (!endOfDBReached) {
+      // Still have database servers to load
+      console.log("📡 Loading more servers from database...")
+      loadServers(true)
+    } else if (allServersFromDB.length > 0) {
+      // Database is exhausted, start duplicating
+      console.log("🔄 Database exhausted - Duplicating servers...")
+      duplicateServers()
+    }
   }
-});
+}
 
 // Load categories
 function loadCategories() {
@@ -252,6 +238,7 @@ function selectSort(sort) {
 function resetAndLoadServers() {
   currentPage = 1
   hasMoreServers = true
+  endOfDBReached = false
   allServersFromDB = [] // Reset the stored servers
   displayedServersCount = 0 // Reset displayed count
   $("#serversGrid").empty()
@@ -311,9 +298,10 @@ function loadServers(showLoading = false) {
       displayServers(response.servers)
 
       // Check if we got fewer servers than requested (indicates end of DB results)
-      if (response.servers.length < 12) {
-        console.log("Reached end of database servers (got", response.servers.length, "servers), enabling duplication mode")
-        // No auto-duplication here - let scroll handler manage it
+      const serversPerPage = 12
+      if (response.servers.length < serversPerPage) {
+        console.log("Reached end of database servers (got", response.servers.length, "servers)")
+        endOfDBReached = true
       }
       
       // Show no results message only on first page with no results
@@ -322,7 +310,7 @@ function loadServers(showLoading = false) {
         hasMoreServers = false // Don't allow scrolling if no servers at all
         console.log("No servers found, disabling infinite scroll")
       } else {
-        // Always keep hasMoreServers = true for infinite scrolling with duplication
+        // Keep hasMoreServers = true for infinite scrolling with duplication
         hasMoreServers = true
       }
 
@@ -354,20 +342,33 @@ function loadServers(showLoading = false) {
       isLoading = false
       $("#loadingIndicator").hide()
       
-      // Check if we need to trigger initial duplication after a short delay
-      setTimeout(() => {
-        const documentHeight = $(document).height()
-        const windowHeight = $(window).height()
-        const distanceFromBottom = documentHeight - windowHeight
-        
-        // If page is too short to allow scrolling, trigger duplication immediately
-        if (distanceFromBottom <= 50 && allServersFromDB.length > 0 && !isLoading) {
-          console.log("Page too short for scrolling, auto-triggering duplication...")
-          duplicateServers()
-        }
-      }, 800) // Longer delay to ensure DOM is fully updated
+      // Only check for more content if this was the initial page load
+      if (currentPage === 2) { // currentPage gets incremented before complete()
+        setTimeout(() => {
+          checkIfPageNeedsMoreContent()
+        }, 500)
+      }
     },
   })
+}
+
+// Check if page needs more content to enable scrolling (only for initial load)
+function checkIfPageNeedsMoreContent() {
+  const documentHeight = $(document).height()
+  const windowHeight = $(window).height()
+  const canScroll = documentHeight > windowHeight + 100 // More conservative check
+  
+  console.log(`Document height: ${documentHeight}, Window height: ${windowHeight}, Can scroll: ${canScroll}`)
+  
+  // Only add content if page is significantly too short and this is initial load
+  if (!canScroll && allServersFromDB.length > 0 && !isLoading && currentPage <= 3) {
+    console.log("Initial page too short for scrolling, adding one more batch...")
+    if (!endOfDBReached) {
+      loadServers(true)
+    } else {
+      duplicateServers()
+    }
+  }
 }
 
 // Create skeleton server card for loading state
@@ -399,6 +400,13 @@ function duplicateServers() {
     return
   }
   
+  if (isLoading) {
+    console.log("❌ Already loading, skipping duplication")
+    return
+  }
+  
+  isLoading = true
+  
   console.log("🔄 === DUPLICATION DEBUG ===")
   console.log("Duplicating servers for infinite scroll...")
   console.log("Current displayed count:", displayedServersCount)
@@ -409,6 +417,9 @@ function duplicateServers() {
   const serversPerPage = 12
   const serversGrid = $("#serversGrid")
   
+  // Show loading indicator
+  $("#loadingIndicator").show()
+  
   // First, show skeleton cards
   console.log("Showing skeleton loading cards...")
   const skeletonCards = []
@@ -418,7 +429,7 @@ function duplicateServers() {
     serversGrid.append(skeletonCard)
   }
   
-  // After 2 seconds, replace skeleton cards with actual server cards
+  // After 1.5 seconds, replace skeleton cards with actual server cards
   setTimeout(() => {
     console.log("Replacing skeleton cards with actual server cards...")
     
@@ -429,7 +440,7 @@ function duplicateServers() {
     
     // Create enough servers for this "page" by cycling through available servers
     for (let i = 0; i < serversPerPage; i++) {
-      // Use a different counter for cycling through servers
+      // Use modulo to cycle through servers
       const cycleIndex = (displayedServersCount + i) % allServersFromDB.length
       const sourceServer = allServersFromDB[cycleIndex]
       
@@ -456,8 +467,17 @@ function duplicateServers() {
     currentPage++
     updateServerCount()
     
+    // Reset loading state
+    isLoading = false
+    $("#loadingIndicator").hide()
+    
+    // Check if we need to add more content immediately
+    setTimeout(() => {
+      checkIfPageNeedsMoreContent()
+    }, 300)
+    
     console.log("🔄 === END DUPLICATION DEBUG ===")
-  }, 2000) // 2 second delay
+  }, 1500) // 1.5 second delay
 }
 
 // Display servers
@@ -1079,6 +1099,3 @@ style.textContent = `
         }
     }
 `
-document.head.appendChild(style)
-
-// style
