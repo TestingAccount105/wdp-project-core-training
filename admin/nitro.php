@@ -263,31 +263,28 @@ function generateNitroCode() {
 <body>
     <div class="admin-container">
         <!-- Sidebar -->
-        <div class="sidebar">
+       <div class="sidebar">
             <div class="sidebar-header">
-                <h2>Admin</h2>
+                <h2>Admin Dashboard</h2>
+                <div style="font-size: 12px; color: #888; margin-top: 4px;">Admin</div>
             </div>
             <nav class="sidebar-nav">
-                <a href="admin.php" class="nav-item">
-                    <span class="nav-icon">📊</span>
-                    <span class="nav-text">DASHBOARD</span>
-                </a>
-                <a href="admin.php" class="nav-item">
-                    <span class="nav-icon">📈</span>
-                    <span class="nav-text">Overview</span>
-                </a>
-                <a href="users.php" class="nav-item">
-                    <span class="nav-icon">👥</span>
-                    <span class="nav-text">Users</span>
-                </a>
-                <a href="servers.php" class="nav-item">
-                    <span class="nav-icon">🖥️</span>
-                    <span class="nav-text">Servers</span>
-                </a>
-                <a href="nitro.php" class="nav-item active">
-                    <span class="nav-icon">💎</span>
-                    <span class="nav-text">Nitro Codes</span>
-                </a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Dashboard</div>
+                    <a href="admin.php" class="nav-item">
+                        <span class="nav-text">Overview</span>
+                    </a>
+                    <a href="users.php" class="nav-item">
+                        <span class="nav-text">Users</span>
+                    </a>
+                    <a href="servers.php" class="nav-item">
+                        <span class="nav-text">Servers</span>
+                    </a>
+                    <a href="nitro.php" class="nav-item active">
+                        <span class="nav-text">Nitro Codes</span>
+                    </a>
+                </div>
+                
                 <a href="logout.php" class="nav-item logout">
                     <span class="nav-icon">🚪</span>
                     <span class="nav-text">Log Out</span>

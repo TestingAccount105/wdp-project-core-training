@@ -1,17 +1,62 @@
 // Global variables
 let currentServerId = null;
 let currentServerName = null;
+let isLoading = false;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    initializeEventListeners();
+    // Show skeleton loading on page load
+    showSkeletonLoading();
+    
+    // Simulate loading time and then show real content
+    setTimeout(() => {
+        hideSkeletonLoading();
+        initializeEventListeners();
+    }, 2000); // 2 second loading simulation
 });
+
+// Show skeleton loading
+function showSkeletonLoading() {
+    isLoading = true;
+    
+    // Hide real content and show skeleton
+    document.getElementById('realServersTable').style.display = 'none';
+    document.getElementById('skeletonServersTable').classList.add('active');
+    
+    // Add loading class to container
+    document.getElementById('serversContainer').classList.add('loading');
+}
+
+// Hide skeleton loading
+function hideSkeletonLoading() {
+    isLoading = false;
+    
+    // Hide skeleton
+    document.getElementById('skeletonServersTable').classList.remove('active');
+    
+    // Show real content with fade in
+    setTimeout(() => {
+        document.getElementById('realServersTable').style.display = 'block';
+        document.getElementById('serversContainer').classList.remove('loading');
+    }, 100);
+}
+
+// Apply search with loading animation
+function applySearchWithLoading() {
+    showSkeletonLoading();
+    
+    // Delay the actual search application to show loading
+    setTimeout(() => {
+        applySearch();
+    }, 800);
+}
 
 // Initialize event listeners
 function initializeEventListeners() {
     // Search input
     document.getElementById('searchInput').addEventListener('input', debounce(function() {
-        applySearch();
+        if (isLoading) return;
+        applySearchWithLoading();
     }, 500));
 
     // Delete buttons
@@ -68,11 +113,15 @@ function applySearch() {
     window.location.href = newUrl;
 }
 
-// Change page
+// Change page with loading animation
 function changePage(page) {
-    const params = new URLSearchParams(window.location.search);
-    params.set('page', page);
-    window.location.href = window.location.pathname + '?' + params.toString();
+    showSkeletonLoading();
+    
+    setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', page);
+        window.location.href = window.location.pathname + '?' + params.toString();
+    }, 500);
 }
 
 // Show delete modal
@@ -137,8 +186,14 @@ async function deleteServer(serverId) {
             showToast(result.message, 'success');
             closeModal('deleteModal');
             
-            // Remove the server row from the table
-            removeServerFromTable(serverId);
+            // Show loading animation before removing server
+            showSkeletonLoading();
+            
+            setTimeout(() => {
+                // Remove the server row from the table
+                removeServerFromTable(serverId);
+                hideSkeletonLoading();
+            }, 800);
         } else {
             showToast(result.message, 'error');
         }

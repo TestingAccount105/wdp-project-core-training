@@ -179,8 +179,45 @@ $totalPages = ceil($totalServers / $limit);
             <div class="servers-section">
                 <h2>Servers</h2>
                 
-                <div class="servers-container">
-                    <div class="table-container">
+                <div class="servers-container" id="serversContainer">
+                    <!-- Skeleton Loading Table -->
+                    <div class="skeleton-servers-table" id="skeletonServersTable">
+                        <div class="table-container">
+                            <table class="servers-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Server</th>
+                                        <th>Owner</th>
+                                        <th>Members</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Skeleton rows -->
+                                    <?php for ($i = 0; $i < 8; $i++): ?>
+                                    <tr>
+                                        <td><div class="skeleton-id"></div></td>
+                                        <td>
+                                            <div class="skeleton-server-display">
+                                                <div class="skeleton-server-icon"></div>
+                                                <div class="skeleton-text medium"></div>
+                                            </div>
+                                        </td>
+                                        <td><div class="skeleton-text long"></div></td>
+                                        <td><div class="skeleton-member-count"></div></td>
+                                        <td><div class="skeleton-text medium"></div></td>
+                                        <td><div class="skeleton-delete-btn"></div></td>
+                                    </tr>
+                                    <?php endfor; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Real Servers Table -->
+                    <div class="table-container" id="realServersTable">
                         <table class="servers-table">
                             <thead>
                                 <tr>
