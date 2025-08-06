@@ -1449,6 +1449,19 @@ class ChatManager {
         const groupName = selectedItems.length > 1 ? 
                          document.getElementById('groupNameInput').value.trim() : null;
 
+        // Handle group image upload if it's a group and image is selected
+        let groupImageUrl = null;
+        if (selectedItems.length > 1) {
+            const groupImageInput = document.getElementById('groupImageInput');
+            if (groupImageInput.files && groupImageInput.files[0]) {
+                // Upload the group image first
+                const uploadedImageUrl = await this.uploadGroupImage(groupImageInput.files[0]);
+                if (uploadedImageUrl) {
+                    groupImageUrl = uploadedImageUrl;
+                }
+            }
+        }
+
         try {
             const response = await fetch('/user/home/api/chat.php', {
                 method: 'POST',
@@ -1458,7 +1471,8 @@ class ChatManager {
                 body: JSON.stringify({
                     action: 'create_dm',
                     user_ids: userIds,
-                    group_name: groupName
+                    group_name: groupName,
+                    group_image_url: groupImageUrl
                 })
             });
 
@@ -1491,6 +1505,14 @@ class ChatManager {
         // Clear group settings
         document.getElementById('groupNameInput').value = '';
         document.getElementById('groupSettings').classList.add('hidden');
+
+        // Clear group image
+        const groupImageInput = document.getElementById('groupImageInput');
+        const groupImagePlaceholder = document.getElementById('groupImagePlaceholder');
+        if (groupImageInput) groupImageInput.value = '';
+        if (groupImagePlaceholder) {
+            groupImagePlaceholder.innerHTML = '<i class="fas fa-camera"></i>';
+        }
 
         // Clear search
         document.getElementById('dmUserSearch').value = '';
@@ -1560,6 +1582,32 @@ class ChatManager {
         const fileURL = URL.createObjectURL(file);
 
         placeholder.innerHTML = `<img src="${fileURL}" alt="Group Image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    }
+
+    async uploadGroupImage(file) {
+        try {
+            const formData = new FormData();
+            formData.append('files', file);
+
+            const response = await fetch('/user/home/api/upload.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.uploaded_files && data.uploaded_files.length > 0) {
+                return data.uploaded_files[0].url;
+            } else {
+                console.error('Group image upload failed:', data);
+                this.showErrorNotification('Failed to upload group image');
+                return null;
+            }
+        } catch (error) {
+            console.error('Group image upload error:', error);
+            this.showErrorNotification('Error uploading group image');
+            return null;
+        }
     }
 
     // Notification system

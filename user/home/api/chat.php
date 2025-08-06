@@ -77,7 +77,7 @@ switch ($method) {
         if (isset($data['action'])) {
             switch ($data['action']) {
                 case 'create_dm':
-                    create_direct_message($user_id, $data['user_ids'], $data['group_name'] ?? null);
+                    create_direct_message($user_id, $data['user_ids'], $data['group_name'] ?? null, $data['group_image_url'] ?? null);
                     break;
                 case 'send_message':
                     error_log("Send message data: " . json_encode($data));
@@ -363,7 +363,7 @@ function get_active_users($user_id) {
     send_response(['active_users' => $active_users]);
 }
 
-function create_direct_message($user_id, $user_ids, $group_name = null) {
+function create_direct_message($user_id, $user_ids, $group_name = null, $group_image_url = null) {
     global $mysqli;
     
     if (!is_array($user_ids) || empty($user_ids)) {
@@ -414,15 +414,15 @@ function create_direct_message($user_id, $user_ids, $group_name = null) {
     $mysqli->begin_transaction();
     
     try {
-        // Create chat room
-        $insert_room_query = "INSERT INTO ChatRoom (Type, Name, ImageUrl) VALUES (?, ?, NULL)";
+        // Create chat room with group image URL
+        $insert_room_query = "INSERT INTO ChatRoom (Type, Name, ImageUrl) VALUES (?, ?, ?)";
         $stmt = $mysqli->prepare($insert_room_query);
         
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $mysqli->error);
         }
         
-        $stmt->bind_param("ss", $chat_type, $group_name);
+        $stmt->bind_param("sss", $chat_type, $group_name, $group_image_url);
         
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
