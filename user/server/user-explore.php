@@ -391,8 +391,8 @@ if (isset($_POST['action'])) {
         <!-- Main Content -->
         <div class="main-content">
             <div class="content-header">
-                <h1>Explore Servers</h1>
-                <p class="subtitle">Discover amazing communities, connect with like-minded people, and find your perfect server</p>
+                <h1 style="margin-bottom: 2rem; margin-top:3rem;">Explore Servers</h1>
+                <p class="subtitle" style="margin-bottom: 2rem;">Discover amazing communities, connect with like-minded people, and find your perfect server</p>
                 
                 <div class="search-controls">
                     <div class="search-container">

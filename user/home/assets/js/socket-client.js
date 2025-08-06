@@ -11,7 +11,7 @@ class SocketClient {
 
     init() {
         // Initialize socket connection
-        this.socket = io('http://localhost:3001', {
+        this.socket = io('http://localhost:8010', {
             transports: ['websocket', 'polling']
         });
 

@@ -30,19 +30,42 @@ switch ($method) {
         
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
+        
+        // Validate JSON input
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            send_response(['error' => 'Invalid JSON input'], 400);
+            break;
+        }
+        
         if (isset($data['action'])) {
             switch ($data['action']) {
                 case 'send_request':
-                    send_friend_request($user_id, $data['username']);
+                    if (!isset($data['username']) || empty(trim($data['username']))) {
+                        send_response(['error' => 'Username is required'], 400);
+                    } else {
+                        send_friend_request($user_id, trim($data['username']));
+                    }
                     break;
                 case 'accept_request':
-                    accept_friend_request($user_id, $data['request_id']);
+                    if (!isset($data['request_id']) || !is_numeric($data['request_id'])) {
+                        send_response(['error' => 'Valid request ID is required'], 400);
+                    } else {
+                        accept_friend_request($user_id, (int)$data['request_id']);
+                    }
                     break;
                 case 'decline_request':
-                    decline_friend_request($user_id, $data['request_id']);
+                    if (!isset($data['request_id']) || !is_numeric($data['request_id'])) {
+                        send_response(['error' => 'Valid request ID is required'], 400);
+                    } else {
+                        decline_friend_request($user_id, (int)$data['request_id']);
+                    }
                     break;
                 case 'cancel_request':
-                    cancel_friend_request($user_id, $data['request_id']);
+                    if (!isset($data['request_id']) || !is_numeric($data['request_id'])) {
+                        send_response(['error' => 'Valid request ID is required'], 400);
+                    } else {
+                        cancel_friend_request($user_id, (int)$data['request_id']);
+                    }
                     break;
                 default:
                     send_response(['error' => 'Invalid action'], 400);
@@ -211,6 +234,12 @@ function search_friends($user_id, $query) {
 function send_friend_request($user_id, $username) {
     global $mysqli;
     
+    // Validate input
+    if (empty($username)) {
+        send_response(['error' => 'Username is required'], 400);
+        return;
+    }
+    
     // Parse username and discriminator
     if (strpos($username, '#') !== false) {
         list($username_part, $discriminator) = explode('#', $username, 2);
@@ -219,56 +248,78 @@ function send_friend_request($user_id, $username) {
         $discriminator = null;
     }
     
-    // Find target user
+    // Trim whitespace
+    $username_part = trim($username_part);
     if ($discriminator) {
-        $query = "SELECT ID FROM Users WHERE Username = ? AND Discriminator = ?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param("ss", $username_part, $discriminator);
-    } else {
-        $query = "SELECT ID FROM Users WHERE Username = ?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param("s", $username_part);
+        $discriminator = trim($discriminator);
     }
     
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $target_user = $result->fetch_assoc();
-    
-    if (!$target_user) {
-        send_response(['error' => 'User not found'], 404);
+    // Validate username part
+    if (empty($username_part)) {
+        send_response(['error' => 'Invalid username'], 400);
+        return;
     }
     
-    $target_user_id = $target_user['ID'];
-    
-    if ($target_user_id == $user_id) {
-        send_response(['error' => 'Cannot send friend request to yourself'], 400);
-    }
-    
-    // Check if friendship already exists
-    $check_query = "SELECT * FROM FriendsList WHERE 
-                    (UserID1 = ? AND UserID2 = ?) OR (UserID1 = ? AND UserID2 = ?)";
-    $stmt = $mysqli->prepare($check_query);
-    $stmt->bind_param("iiii", $user_id, $target_user_id, $target_user_id, $user_id);
-    $stmt->execute();
-    $existing = $stmt->get_result()->fetch_assoc();
-    
-    if ($existing) {
-        if ($existing['Status'] == 'accepted') {
-            send_response(['error' => 'Already friends'], 400);
+    // Find target user
+    try {
+        if ($discriminator) {
+            $query = "SELECT ID FROM Users WHERE Username = ? AND Discriminator = ?";
+            $stmt = $mysqli->prepare($query);
+            $stmt->bind_param("ss", $username_part, $discriminator);
         } else {
-            send_response(['error' => 'Friend request already exists'], 400);
+            $query = "SELECT ID FROM Users WHERE Username = ?";
+            $stmt = $mysqli->prepare($query);
+            $stmt->bind_param("s", $username_part);
         }
-    }
-    
-    // Create friend request
-    $insert_query = "INSERT INTO FriendsList (UserID1, UserID2, Status) VALUES (?, ?, 'pending')";
-    $stmt = $mysqli->prepare($insert_query);
-    $stmt->bind_param("ii", $user_id, $target_user_id);
-    
-    if ($stmt->execute()) {
-        send_response(['success' => 'Friend request sent']);
-    } else {
-        send_response(['error' => 'Failed to send friend request'], 500);
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $target_user = $result->fetch_assoc();
+        
+        if (!$target_user) {
+            send_response(['error' => 'User not found'], 404);
+            return;
+        }
+        
+        $target_user_id = $target_user['ID'];
+        
+        if ($target_user_id == $user_id) {
+            send_response(['error' => 'Cannot send friend request to yourself'], 400);
+            return;
+        }
+        
+        // Check if friendship already exists
+        $check_query = "SELECT * FROM FriendsList WHERE 
+                        (UserID1 = ? AND UserID2 = ?) OR (UserID1 = ? AND UserID2 = ?)";
+        $stmt = $mysqli->prepare($check_query);
+        $stmt->bind_param("iiii", $user_id, $target_user_id, $target_user_id, $user_id);
+        $stmt->execute();
+        $existing = $stmt->get_result()->fetch_assoc();
+        
+        if ($existing) {
+            if ($existing['Status'] == 'accepted') {
+                send_response(['error' => 'Already friends'], 400);
+                return;
+            } else {
+                send_response(['error' => 'Friend request already exists'], 400);
+                return;
+            }
+        }
+        
+        // Create friend request
+        $insert_query = "INSERT INTO FriendsList (UserID1, UserID2, Status) VALUES (?, ?, 'pending')";
+        $stmt = $mysqli->prepare($insert_query);
+        $stmt->bind_param("ii", $user_id, $target_user_id);
+        
+        if ($stmt->execute()) {
+            send_response(['success' => 'Friend request sent']);
+        } else {
+            send_response(['error' => 'Failed to send friend request'], 500);
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error in send_friend_request: " . $e->getMessage());
+        send_response(['error' => 'Internal server error'], 500);
     }
 }
 

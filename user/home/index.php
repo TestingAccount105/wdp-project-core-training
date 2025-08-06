@@ -17,7 +17,7 @@ $username = $_SESSION['username'] ?? 'Guest';
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <div class="sidebar">
-            <div class="sidebar-header">
+            <div class="sidebar-header" style="display: none;">
                 <div class="user-info">
                     <img src="" alt="User Avatar" class="user-avatar" id="currentUserAvatar">
                     <div class="user-details">
@@ -163,14 +163,14 @@ $username = $_SESSION['username'] ?? 'Guest';
                             <span class="chat-status" id="chatStatus"></span>
                         </div>
                     </div>
-                    <div class="chat-controls">
+                    <!-- <div class="chat-controls">
                         <button class="control-btn"><i class="fas fa-phone"></i></button>
                         <button class="control-btn"><i class="fas fa-video"></i></button>
                         <button class="control-btn"><i class="fas fa-user-plus"></i></button>
                         <button class="control-btn"><i class="fas fa-search"></i></button>
                         <button class="control-btn"><i class="fas fa-inbox"></i></button>
                         <button class="control-btn"><i class="fas fa-question-circle"></i></button>
-                    </div>
+                    </div> -->
                 </div>
 
                 <div class="chat-messages" id="chatMessages">
