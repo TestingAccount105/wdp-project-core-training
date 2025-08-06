@@ -246,20 +246,25 @@ if (isset($_POST['action'])) {
             exit();
         }
         
-        // Find server by invite link
-        $serverQuery = "SELECT s.ID, s.Name FROM Server s WHERE s.InviteLink = ? AND s.IsPrivate = 0";
+        // Find server by invite link using ServerInvite table
+        $serverQuery = "SELECT si.ServerID, s.ID, s.Name, si.ExpiresAt 
+                        FROM ServerInvite si 
+                        INNER JOIN Server s ON si.ServerID = s.ID 
+                        WHERE si.InviteLink = ? 
+                          AND s.IsPrivate = 0 
+                          AND (si.ExpiresAt IS NULL OR si.ExpiresAt > NOW())";
         $serverStmt = $conn->prepare($serverQuery);
         $serverStmt->bind_param("s", $inviteCode);
         $serverStmt->execute();
         $serverResult = $serverStmt->get_result();
         
         if ($serverResult->num_rows === 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid invite code']);
+            echo json_encode(['success' => false, 'message' => 'Invalid or expired invite code']);
             exit();
         }
         
         $server = $serverResult->fetch_assoc();
-        $serverId = $server['ID'];
+        $serverId = $server['ServerID']; // Use ServerID from the join query
         
         // Check if already joined
         $checkQuery = "SELECT ID FROM UserServerMemberships WHERE UserID = ? AND ServerID = ?";
@@ -299,7 +304,7 @@ if (isset($_POST['action'])) {
 <body>
     <div class="app-container">
         <!-- Left Sidebar -->
-        <!-- <div class="left-sidebar">
+        <div class="left-sidebar">
             <div class="server-list">
                 <div class="server-icon home-icon" title="Home">
                     <span>⚔️</span>
@@ -316,7 +321,7 @@ if (isset($_POST['action'])) {
                     <span>🧭</span>
                 </div>
             </div>
-        </div> -->
+        </div>
         <div class="server-sidebar">
             <div class="server-nav">
                 <!-- Home Button -->
