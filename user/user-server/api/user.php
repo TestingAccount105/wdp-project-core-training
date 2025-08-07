@@ -114,10 +114,29 @@ function updateProfile($user_id) {
 function updateAvatar($user_id) {
     global $mysqli;
     
-    $avatar_url = $_POST['avatarUrl'] ?? '';
-    
-    if (empty($avatar_url)) {
-        send_response(['error' => 'Avatar URL is required'], 400);
+    // Handle file upload
+    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = '../uploads/avatars/';
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        $file_extension = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
+        $filename = 'avatar_' . $user_id . '_' . time() . '.' . $file_extension;
+        $file_path = $upload_dir . $filename;
+        
+        if (move_uploaded_file($_FILES['avatar']['tmp_name'], $file_path)) {
+            $avatar_url = '/user/user-server/uploads/avatars/' . $filename;
+        } else {
+            send_response(['error' => 'Failed to save avatar file'], 500);
+            return;
+        }
+    } else {
+        $avatar_url = $_POST['avatarUrl'] ?? '';
+        if (empty($avatar_url)) {
+            send_response(['error' => 'Avatar URL or file is required'], 400);
+            return;
+        }
     }
     
     try {
@@ -126,7 +145,7 @@ function updateAvatar($user_id) {
         $stmt->execute();
         
         if ($stmt->affected_rows > 0) {
-            send_response(['success' => true, 'message' => 'Avatar updated successfully']);
+            send_response(['success' => true, 'message' => 'Avatar updated successfully', 'avatarUrl' => $avatar_url]);
         } else {
             send_response(['error' => 'No changes made'], 400);
         }
@@ -139,14 +158,33 @@ function updateAvatar($user_id) {
 function updateBanner($user_id) {
     global $mysqli;
     
-    $banner_url = $_POST['bannerUrl'] ?? '';
+    // Handle file upload
+    if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = '../uploads/banners/';
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        $file_extension = pathinfo($_FILES['banner']['name'], PATHINFO_EXTENSION);
+        $filename = 'banner_' . $user_id . '_' . time() . '.' . $file_extension;
+        $file_path = $upload_dir . $filename;
+        
+        if (move_uploaded_file($_FILES['banner']['tmp_name'], $file_path)) {
+            $banner_url = '/user/user-server/uploads/banners/' . $filename;
+        } else {
+            send_response(['error' => 'Failed to save banner file'], 500);
+            return;
+        }
+    } else {
+        $banner_url = $_POST['bannerUrl'] ?? '';
+    }
     
     try {
         $stmt = $mysqli->prepare("UPDATE Users SET BannerProfile = ? WHERE ID = ?");
         $stmt->bind_param("si", $banner_url, $user_id);
         $stmt->execute();
         
-        send_response(['success' => true, 'message' => 'Banner updated successfully']);
+        send_response(['success' => true, 'message' => 'Banner updated successfully', 'bannerUrl' => $banner_url]);
     } catch (Exception $e) {
         error_log("Error updating banner: " . $e->getMessage());
         send_response(['error' => 'Failed to update banner'], 500);

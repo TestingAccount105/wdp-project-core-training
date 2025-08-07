@@ -85,11 +85,13 @@
                                 <input type="text" id="usernameField" maxlength="32">
                                 <span class="user-tag" id="userTag">#0000</span>
                             </div>
+                            <button type="button" class="btn-primary hidden" id="saveUsernameBtn" onclick="saveUsername()">Save</button>
                         </div>
 
                         <div class="form-group">
                             <label for="displayNameField">DISPLAY NAME</label>
                             <input type="text" id="displayNameField" placeholder="This is how others see you. You can use any name you'd like." maxlength="32">
+                            <button type="button" class="btn-primary hidden" id="saveDisplayNameBtn" onclick="saveDisplayName()">Save</button>
                         </div>
 
                         <div class="form-group">
@@ -98,6 +100,7 @@
                             <div class="character-count">
                                 <span id="aboutMeCount">0</span>/1000
                             </div>
+                            <button type="button" class="btn-primary hidden" id="saveAboutMeBtn" onclick="saveAboutMe()">Save</button>
                         </div>
 
                         <div class="form-section">
@@ -297,6 +300,50 @@
                     <button class="btn-primary" onclick="changePassword()">Change Password</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avatar Cropper Modal -->
+<div class="modal hidden" id="avatarCropperModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>Crop Profile Picture</h3>
+            <button class="modal-close" onclick="closeAvatarCropper()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="cropper-container">
+                <img id="avatarCropperImage" src="" alt="Avatar to crop">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeAvatarCropper()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="cropAndSaveAvatar()">Save Avatar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Banner Cropper Modal -->
+<div class="modal hidden" id="bannerCropperModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>Crop Profile Banner</h3>
+            <button class="modal-close" onclick="closeBannerCropper()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="cropper-container">
+                <img id="bannerCropperImage" src="" alt="Banner to crop">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeBannerCropper()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="cropAndSaveBanner()">Save Banner</button>
         </div>
     </div>
 </div>
