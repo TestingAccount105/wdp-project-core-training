@@ -7,6 +7,7 @@ class ServerApp {
         this.socket = null;
         this.cropper = null;
         this.currentCropTarget = null;
+        this.replyingTo = null;
         
         this.init();
     }
@@ -121,6 +122,19 @@ class ServerApp {
         $(window).on('resize', () => {
             this.handleResize();
         });
+
+        // Message input handling
+        $('#messageInput').on('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Send button handling
+        $('#sendButton').on('click', () => {
+            this.sendMessage();
+        });
     }
 
     initializeTooltips() {
@@ -229,7 +243,7 @@ class ServerApp {
         if (!this.currentServer) return;
 
         try {
-            const response = await fetch(`/user/user-server/api/channels.php?action=getChannels&serverId=${this.currentServer.ID}`);
+            const response = await fetch(`api/channels.php?action=getChannels&serverId=${this.currentServer.ID}`);
             const data = await response.json();
             
             if (data.success) {
@@ -322,7 +336,7 @@ class ServerApp {
             // Add active class to selected channel
             $(`.channel-item[data-channel-id="${channelId}"]`).addClass('active');
 
-            const response = await fetch(`/user/user-server/api/channels.php?action=getChannel&id=${channelId}`);
+            const response = await fetch(`api/channels.php?action=getChannel&id=${channelId}`);
             const data = await response.json();
             
             if (data.success) {
@@ -362,7 +376,7 @@ class ServerApp {
         if (!this.currentChannel) return;
 
         try {
-            const response = await fetch(`/user/user-server/api/channels.php?action=getMessages&channelId=${this.currentChannel.ID}`);
+            const response = await fetch(`api/channels.php?action=getMessages&channelId=${this.currentChannel.ID}`);
             const data = await response.json();
             
             if (data.success) {
@@ -393,43 +407,314 @@ class ServerApp {
             return;
         }
 
-        messages.forEach(message => {
-            const messageElement = this.createMessageElement(message);
-            container.append(messageElement);
-        });
+        // Group messages by user and time
+        const groupedMessages = this.groupMessages(messages);
+        
+        container.html(groupedMessages.map(group => {
+            if (group.type === 'group') {
+                return this.renderMessageGroup(group);
+            } else {
+                return this.renderSingleMessage(group.message);
+            }
+        }).join(''));
+
+        // Add event listeners for message actions
+        this.setupMessageActionListeners(container);
 
         // Scroll to bottom
         container.scrollTop(container[0].scrollHeight);
     }
 
-    createMessageElement(message) {
-        const timestamp = new Date(message.SentAt).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+    setupMessageActionListeners(container) {
+        // Remove existing listeners to prevent duplicates
+        container.off('click', '.message-action-btn');
+        
+        // Add click listeners for message actions
+        container.on('click', '.message-action-btn', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const btn = $(e.currentTarget);
+            const action = btn.data('action');
+            const messageId = btn.data('message-id');
+            
+            switch (action) {
+                case 'react':
+                    this.showReactionPicker(messageId, btn);
+                    break;
+                case 'reply':
+                    this.replyToMessage(messageId);
+                    break;
+                case 'copy':
+                    this.copyMessage(messageId);
+                    break;
+            }
         });
-        
-        const displayName = message.DisplayName || message.Username;
-        const avatar = message.ProfilePictureUrl || '/assets/images/default-avatar.png';
-        
-        return $(`
-            <div class="message" data-message-id="${message.ID}">
-                <div class="message-avatar">
-                    <img src="${avatar}" alt="${displayName}">
-                </div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-author">${displayName}</span>
-                        <span class="message-timestamp">${timestamp}</span>
-                        ${message.EditedAt ? '<span class="message-edited">(edited)</span>' : ''}
-                    </div>
-                    <div class="message-text">${this.formatMessageContent(message.Content)}</div>
-                    ${message.AttachmentURL ? `<div class="message-attachment">
-                        <img src="${message.AttachmentURL}" alt="Attachment" class="attachment-image">
-                    </div>` : ''}
-                    ${message.reactions && message.reactions.length > 0 ? this.renderReactions(message.reactions) : ''}
-                </div>
+    }
+
+    showReactionPicker(messageId, button) {
+        // Simple reaction picker - can be expanded
+        const reactions = ['👍', '👎', '❤️', '😂', '😢', '😡'];
+        const picker = $(`
+            <div class="reaction-picker">
+                ${reactions.map(emoji => `
+                    <button class="reaction-option" data-emoji="${emoji}">${emoji}</button>
+                `).join('')}
             </div>
         `);
+        
+        // Position picker near button
+        picker.css({
+            position: 'absolute',
+            top: button.offset().top - 50,
+            left: button.offset().left,
+            zIndex: 1000
+        });
+        
+        $('body').append(picker);
+        
+        // Handle reaction selection
+        picker.on('click', '.reaction-option', (e) => {
+            const emoji = $(e.target).data('emoji');
+            this.addReaction(messageId, emoji);
+            picker.remove();
+        });
+        
+        // Close picker when clicking outside
+        setTimeout(() => {
+            $(document).one('click', () => picker.remove());
+        }, 100);
+    }
+
+    replyToMessage(messageId) {
+        // Find the message content for preview
+        const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+        const messageContent = messageElement.find('.message-content').text().trim();
+        const messageAuthor = messageElement.closest('.message-group').find('.message-author').text();
+        
+        // Show reply context
+        const replyContext = $(`
+            <div class="reply-context">
+                <div class="reply-info">
+                    <div class="reply-author">Replying to ${messageAuthor}</div>
+                    <div class="reply-content">${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}</div>
+                </div>
+                <button class="cancel-reply">×</button>
+            </div>
+        `);
+        
+        // Insert before message input
+        $('#messageInputContainer').prepend(replyContext);
+        
+        // Focus message input
+        $('#messageInput').focus();
+        
+        // Store reply data
+        this.replyingTo = messageId;
+        
+        // Handle cancel reply
+        replyContext.find('.cancel-reply').on('click', () => {
+            replyContext.remove();
+            this.replyingTo = null;
+        });
+    }
+
+    copyMessage(messageId) {
+        const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+        const messageContent = messageElement.find('.message-content').text().trim();
+        
+        // Copy to clipboard
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(messageContent).then(() => {
+                this.showToast('Message copied to clipboard', 'success');
+            }).catch(() => {
+                this.fallbackCopyText(messageContent);
+            });
+        } else {
+            this.fallbackCopyText(messageContent);
+        }
+    }
+
+    fallbackCopyText(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            this.showToast('Message copied to clipboard', 'success');
+        } catch (err) {
+            this.showToast('Failed to copy message', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+
+    async addReaction(messageId, emoji) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'addReaction');
+            formData.append('messageId', messageId);
+            formData.append('emoji', emoji);
+
+            const response = await fetch('api/channels.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload messages to show the new reaction
+                this.loadChannelMessages();
+            } else {
+                this.showToast(data.message || 'Failed to add reaction', 'error');
+            }
+        } catch (error) {
+            console.error('Error adding reaction:', error);
+            this.showToast('Failed to add reaction', 'error');
+        }
+    }
+
+    groupMessages(messages) {
+        const groups = [];
+        let currentGroup = null;
+        
+        messages.forEach(message => {
+            const messageTime = new Date(message.SentAt);
+            const shouldGroup = currentGroup && 
+                               currentGroup.user_id === message.UserID &&
+                               (messageTime - currentGroup.lastTime) < 5 * 60 * 1000; // 5 minutes
+            
+            if (shouldGroup) {
+                currentGroup.messages.push(message);
+                currentGroup.lastTime = messageTime;
+            } else {
+                if (currentGroup) {
+                    groups.push(currentGroup.messages.length > 1 ? 
+                               { type: 'group', ...currentGroup } : 
+                               { type: 'single', message: currentGroup.messages[0] });
+                }
+                
+                currentGroup = {
+                    user_id: message.UserID,
+                    username: message.Username,
+                    display_name: message.DisplayName || message.Username,
+                    avatar: message.ProfilePictureUrl,
+                    messages: [message],
+                    lastTime: messageTime
+                };
+            }
+        });
+        
+        // Don't forget the last group
+        if (currentGroup) {
+            groups.push(currentGroup.messages.length > 1 ? 
+                       { type: 'group', ...currentGroup } : 
+                       { type: 'single', message: currentGroup.messages[0] });
+        }
+        
+        return groups;
+    }
+
+    renderMessageGroup(group) {
+        const firstMessage = group.messages[0];
+        return `
+            <div class="message-group" data-user-id="${group.user_id}">
+                <div class="message-header">
+                    <img src="${group.avatar || '/assets/images/default-avatar.png'}" 
+                         alt="${group.display_name}" class="message-avatar">
+                    <span class="message-author">${group.display_name}</span>
+                    <span class="message-timestamp">${this.formatMessageTime(firstMessage.SentAt)}</span>
+                </div>
+                ${group.messages.map(msg => this.renderMessageContent(msg)).join('')}
+            </div>
+        `;
+    }
+
+    renderSingleMessage(message) {
+        return `
+            <div class="message-group" data-user-id="${message.UserID}">
+                <div class="message-header">
+                    <img src="${message.ProfilePictureUrl || '/assets/images/default-avatar.png'}" 
+                         alt="${message.DisplayName || message.Username}" class="message-avatar">
+                    <span class="message-author">${message.DisplayName || message.Username}</span>
+                    <span class="message-timestamp">${this.formatMessageTime(message.SentAt)}</span>
+                </div>
+                ${this.renderMessageContent(message)}
+            </div>
+        `;
+    }
+
+    renderMessageContent(message) {
+        return `
+            <div class="message-item" data-message-id="${message.ID}">
+                <div class="message-content">
+                    ${this.formatMessageContent(message.Content)}
+                    ${message.AttachmentURL ? this.renderAttachment(message.AttachmentURL) : ''}
+                    ${message.EditedAt ? '<span class="edited-indicator">(edited)</span>' : ''}
+                </div>
+                ${message.reactions && message.reactions.length > 0 ? this.renderReactions(message.reactions) : ''}
+                <div class="message-actions">
+                    <button class="message-action-btn" data-action="react" data-message-id="${message.ID}" title="Add Reaction">
+                        <i class="fas fa-smile"></i>
+                    </button>
+                    <button class="message-action-btn" data-action="reply" data-message-id="${message.ID}" title="Reply">
+                        <i class="fas fa-reply"></i>
+                    </button>
+                    <button class="message-action-btn" data-action="copy" data-message-id="${message.ID}" title="Copy Message">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderAttachment(attachmentUrl) {
+        if (!attachmentUrl) return '';
+        
+        const fileName = attachmentUrl.split('/').pop();
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        // Check if it's an image
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+            return `
+                <div class="message-attachment image-attachment">
+                    <img src="${attachmentUrl}" alt="${fileName}" class="attached-image" 
+                         style="max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer;">
+                    <div class="attachment-info">
+                        <span class="attachment-name">${fileName}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="message-attachment file-attachment">
+                    <div class="file-info">
+                        <i class="fas fa-file"></i>
+                        <span class="file-name">${fileName}</span>
+                        <a href="${attachmentUrl}" target="_blank" class="download-btn">Download</a>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    formatMessageTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        
+        if (messageDate.getTime() === today.getTime()) {
+            // Today - show time only
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (messageDate.getTime() === today.getTime() - 86400000) {
+            // Yesterday
+            return 'Yesterday at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            // Other days - show date
+            return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
     }
 
     formatMessageContent(content) {
@@ -442,17 +727,18 @@ class ServerApp {
     }
 
     renderReactions(reactions) {
-        let reactionsHtml = '<div class="message-reactions">';
-        reactions.forEach(reaction => {
-            reactionsHtml += `
-                <div class="reaction" data-emoji="${reaction.emoji}">
-                    <span class="reaction-emoji">${reaction.emoji}</span>
-                    <span class="reaction-count">${reaction.count}</span>
-                </div>
-            `;
-        });
-        reactionsHtml += '</div>';
-        return reactionsHtml;
+        if (!reactions || reactions.length === 0) return '';
+        
+        return `
+            <div class="message-reactions">
+                ${reactions.map(reaction => `
+                    <div class="reaction-item" data-emoji="${reaction.emoji}">
+                        <span class="reaction-emoji">${reaction.emoji}</span>
+                        <span class="reaction-count">${reaction.count}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 
     showTextInterface() {
@@ -649,6 +935,56 @@ class ServerApp {
             $('.members-sidebar').addClass('hidden');
         } else {
             $('.members-sidebar').removeClass('hidden');
+        }
+    }
+
+    async sendMessage() {
+        if (!this.currentChannel) {
+            this.showToast('No channel selected', 'error');
+            return;
+        }
+
+        const messageInput = $('#messageInput');
+        const content = messageInput.val().trim();
+        
+        if (!content) {
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'sendMessage');
+            formData.append('channelId', this.currentChannel.ID);
+            formData.append('content', content);
+            
+            // Add reply information if replying
+            if (this.replyingTo) {
+                formData.append('replyTo', this.replyingTo);
+            }
+
+            const response = await fetch('api/channels.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                messageInput.val('');
+                
+                // Clear reply context if it exists
+                if (this.replyingTo) {
+                    $('.reply-context').remove();
+                    this.replyingTo = null;
+                }
+                
+                this.loadChannelMessages(); // Reload messages to show the new one
+            } else {
+                this.showToast(data.message || 'Failed to send message', 'error');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            this.showToast('Failed to send message', 'error');
         }
     }
 

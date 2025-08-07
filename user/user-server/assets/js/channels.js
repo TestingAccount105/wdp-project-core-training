@@ -171,7 +171,7 @@ class ChannelManager {
         this.isLoadingMessages = true;
         
         try {
-            const url = `/user/user-server/api/channels.php?action=getMessages&channelId=${channelId}&limit=50${before ? `&before=${before}` : ''}`;
+            const url = `api/channels.php?action=getMessages&channelId=${channelId}&limit=50${before ? `&before=${before}` : ''}`;
             const response = await fetch(url);
             const data = await response.json();
             
@@ -391,7 +391,7 @@ class ChannelManager {
         }
 
         try {
-            const response = await fetch('/user/user-server/api/channels.php', {
+            const response = await fetch('api/channels.php', {
                 method: 'POST',
                 body: formData
             });
@@ -468,7 +468,7 @@ class ChannelManager {
         formData.append('emoji', emoji);
 
         try {
-            const response = await fetch('/user/user-server/api/channels.php', {
+            const response = await fetch('api/channels.php', {
                 method: 'POST',
                 body: formData
             });
@@ -573,7 +573,7 @@ class ChannelManager {
         formData.append('content', content);
 
         try {
-            const response = await fetch('/user/user-server/api/channels.php', {
+            const response = await fetch('api/channels.php', {
                 method: 'POST',
                 body: formData
             });
@@ -595,7 +595,7 @@ class ChannelManager {
         formData.append('messageId', messageId);
 
         try {
-            const response = await fetch('/user/user-server/api/channels.php', {
+            const response = await fetch('api/channels.php', {
                 method: 'POST',
                 body: formData
             });
@@ -773,7 +773,7 @@ class ChannelManager {
         }
 
         try {
-            const response = await fetch(`/user/user-server/api/channels.php?action=searchMessages&serverId=${serverApp.currentServerId}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`api/channels.php?action=searchMessages&serverId=${serverApp.currentServerId}&query=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.success) {
@@ -844,8 +844,7 @@ class ChannelManager {
     }
 }
 
-// Initialize channel manager
-const channelManager = new ChannelManager();
-
-// Export for global access
-window.channelManager = channelManager;
+// Export ChannelManager class for manual initialization if needed
+// Note: ServerApp handles most channel functionality, so automatic initialization is disabled
+// const channelManager = new ChannelManager();
+// window.channelManager = channelManager;
