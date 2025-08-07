@@ -51,10 +51,10 @@ function createInvite($user_id) {
         }
         
         $stmt = $mysqli->prepare("
-            INSERT INTO ServerInvite (ServerID, InviteLink, CreatedBy, ExpiresAt, MaxUses) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO ServerInvite (ServerID, InviterUserID, InviteLink, ExpiresAt) 
+            VALUES (?, ?, ?, ?)
         ");
-        $stmt->bind_param("isisi", $server_id, $invite_code, $user_id, $expires_at, $max_uses);
+        $stmt->bind_param("iiss", $server_id, $user_id, $invite_code, $expires_at);
         $stmt->execute();
         
         $invite_id = $mysqli->insert_id;
@@ -64,7 +64,7 @@ function createInvite($user_id) {
             SELECT si.*, s.Name as ServerName, s.IconServer, u.Username as CreatedByUsername
             FROM ServerInvite si
             JOIN Server s ON si.ServerID = s.ID
-            JOIN Users u ON si.CreatedBy = u.ID
+            JOIN Users u ON si.InviterUserID = u.ID
             WHERE si.ID = ?
         ");
         $stmt->bind_param("i", $invite_id);
@@ -99,9 +99,9 @@ function getInvites($user_id) {
         $stmt = $mysqli->prepare("
             SELECT si.*, u.Username as CreatedByUsername, u.ProfilePictureUrl as CreatedByAvatar
             FROM ServerInvite si
-            JOIN Users u ON si.CreatedBy = u.ID
+            JOIN Users u ON si.InviterUserID = u.ID
             WHERE si.ServerID = ? AND (si.ExpiresAt IS NULL OR si.ExpiresAt > NOW())
-            ORDER BY si.CreatedAt DESC
+            ORDER BY si.ID DESC
         ");
         $stmt->bind_param("i", $server_id);
         $stmt->execute();
@@ -109,11 +109,6 @@ function getInvites($user_id) {
         
         $invites = [];
         while ($row = $result->fetch_assoc()) {
-            // Check if invite has reached max uses
-            if ($row['MaxUses'] > 0 && $row['Uses'] >= $row['MaxUses']) {
-                continue; // Skip expired invites
-            }
-            
             $invites[] = $row;
         }
         
@@ -147,10 +142,7 @@ function getInviteInfo() {
         $result = $stmt->get_result();
         
         if ($invite = $result->fetch_assoc()) {
-            // Check if invite has reached max uses
-            if ($invite['MaxUses'] > 0 && $invite['Uses'] >= $invite['MaxUses']) {
-                send_response(['error' => 'Invite has expired (max uses reached)'], 400);
-            }
+            // Invite is valid if we reach here
             
             send_response(['success' => true, 'invite' => $invite]);
         } else {
@@ -188,7 +180,7 @@ function deleteInvite($user_id) {
         }
         
         // Check if user can delete (creator of invite or server admin)
-        $can_delete = ($invite['CreatedBy'] == $user_id) || is_server_admin($user_id, $invite['ServerID']);
+        $can_delete = ($invite['InviterUserID'] == $user_id) || is_server_admin($user_id, $invite['ServerID']);
         
         if (!$can_delete) {
             send_response(['error' => 'Access denied'], 403);
@@ -225,7 +217,7 @@ function inviteTitibot($user_id) {
     
     try {
         // Check if Titibot already exists in the system
-        $stmt = $mysqli->prepare("SELECT ID FROM Users WHERE Username = 'Titibot' AND Role = 'Bot'");
+        $stmt = $mysqli->prepare("SELECT ID FROM Users WHERE Username = 'Titibot'");
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -235,8 +227,8 @@ function inviteTitibot($user_id) {
         } else {
             // Create Titibot user
             $stmt = $mysqli->prepare("
-                INSERT INTO Users (Username, DisplayName, Email, Password, Role, ProfilePictureUrl, Bio) 
-                VALUES ('Titibot', 'Titibot', 'titibot@system.local', '', 'Bot', '/assets/images/titibot-avatar.png', 'I am Titibot, your friendly server assistant!')
+                INSERT INTO Users (Username, DisplayName, Email, Password, ProfilePictureUrl, Bio) 
+                VALUES ('Titibot', 'Titibot', 'titibot@system.local', '', '/user/user-server/assets/images/titibot-avatar.png', 'I am Titibot, your friendly server assistant!')
             ");
             $stmt->execute();
             $titibot_id = $mysqli->insert_id;
@@ -257,7 +249,7 @@ function inviteTitibot($user_id) {
         // Add Titibot to server
         $stmt = $mysqli->prepare("
             INSERT INTO UserServerMemberships (UserID, ServerID, Role) 
-            VALUES (?, ?, 'Bot')
+            VALUES (?, ?, 'Member')
         ");
         $stmt->bind_param("ii", $titibot_id, $server_id);
         $stmt->execute();
