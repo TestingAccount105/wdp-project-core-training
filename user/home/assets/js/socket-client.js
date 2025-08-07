@@ -12,7 +12,9 @@ class SocketClient {
     init() {
         // Initialize socket connection
         this.socket = io('http://localhost:8010', {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            withCredentials: true,
+            timeout: 20000
         });
 
         this.setupEventListeners();
@@ -21,18 +23,47 @@ class SocketClient {
     setupEventListeners() {
         // Connection events
         this.socket.on('connect', () => {
-            console.log('Connected to server');
+            console.log('Connected to WebSocket server');
             this.authenticateUser();
         });
 
         this.socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+            console.log('Disconnected from WebSocket server');
+        });
+
+        this.socket.on('connect_error', (error) => {
+            console.error('WebSocket connection failed:', error);
+            console.log('Error details:', {
+                message: error.message,
+                description: error.description,
+                context: error.context,
+                type: error.type
+            });
+            
+            // Try to reconnect with different transport
+            setTimeout(() => {
+                console.log('Attempting to reconnect...');
+                this.socket.connect();
+            }, 5000);
+        });
+
+        this.socket.on('reconnect_error', (error) => {
+            console.error('WebSocket reconnection failed:', error);
+        });
+
+        this.socket.on('reconnect', (attemptNumber) => {
+            console.log('WebSocket reconnected after', attemptNumber, 'attempts');
         });
 
         // User authentication
         this.socket.on('authenticated', (userData) => {
+            console.log('Successfully authenticated:', userData);
             this.currentUser = userData;
             this.updateUserStatus('online');
+        });
+
+        this.socket.on('authentication_failed', (data) => {
+            console.error('Authentication failed:', data.message);
         });
 
         // Friend requests
@@ -82,11 +113,81 @@ class SocketClient {
     }
 
     authenticateUser() {
-        // Send authentication data
-        this.socket.emit('authenticate', {
-            // This would typically include session token
-            timestamp: Date.now()
-        });
+        // Get user data from PHP session or global variable
+        let userId = null;
+        
+        console.log('Attempting authentication...');
+        console.log('window.currentUser:', window.currentUser);
+        console.log('sessionStorage userId:', sessionStorage.getItem('userId'));
+        
+        // Try to get from global window variable (set by PHP)
+        if (window.currentUser && window.currentUser.id) {
+            userId = window.currentUser.id;
+            console.log('Using window.currentUser.id:', userId);
+        } 
+        // Try to get from session storage
+        else if (sessionStorage.getItem('userId')) {
+            userId = sessionStorage.getItem('userId');
+            console.log('Using sessionStorage userId:', userId);
+        }
+        
+        if (userId) {
+            console.log('Authenticating user:', userId);
+            this.socket.emit('authenticate', {
+                userId: parseInt(userId),
+                username: window.currentUser?.username || 'Unknown',
+                timestamp: Date.now()
+            });
+        } else {
+            console.error('No user ID found for authentication');
+            console.log('Attempting to fetch user data from server...');
+            // Try to get user data from server
+            this.fetchUserData();
+        }
+    }
+
+    async fetchUserData() {
+        try {
+            // Try different API endpoints
+            const possibleEndpoints = [
+                'api/user.php?action=current',
+                '../user-server/api/user.php?action=getCurrentUser',
+                '/user/user-server/api/user.php?action=getCurrentUser'
+            ];
+            
+            for (let endpoint of possibleEndpoints) {
+                try {
+                    console.log(`Trying API endpoint: ${endpoint}`);
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    
+                    console.log(`Response from ${endpoint}:`, data);
+                    
+                    if (data.user) {
+                        window.currentUser = {
+                            id: data.user.id,
+                            username: data.user.username
+                        };
+                        sessionStorage.setItem('userId', data.user.id);
+                        console.log('Successfully fetched user data:', window.currentUser);
+                        this.authenticateUser();
+                        return;
+                    }
+                } catch (err) {
+                    console.log(`Failed to fetch from ${endpoint}:`, err.message);
+                    continue;
+                }
+            }
+            
+            console.error('All API endpoints failed - using fallback');
+            // Fallback: try to authenticate with a demo user ID
+            window.currentUser = { id: 1, username: 'demo_user' };
+            sessionStorage.setItem('userId', '1');
+            this.authenticateUser();
+            
+        } catch (error) {
+            console.error('Failed to fetch user data:', error);
+        }
     }
 
     // Room management

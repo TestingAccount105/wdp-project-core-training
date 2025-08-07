@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Debug - Home</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Debug - Home Folder</h1>
+    
+    <div id="status" class="status info">Initializing...</div>
+    
+    <h3>Test Steps:</h3>
+    <div id="steps">
+        <div>1. Testing Socket.IO connection...</div>
+        <div>2. Testing authentication...</div>
+        <div>3. Testing message sending...</div>
+    </div>
+    
+    <div class="log" id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        // Test 1: Basic connection
+        updateStatus('Testing WebSocket connection...', 'info');
+        addLog('🔧 Initializing Socket.IO connection to localhost:8010');
+        
+        const socket = io('http://localhost:8010', {
+            transports: ['websocket', 'polling'],
+            withCredentials: true,
+            timeout: 10000
+        });
+
+        socket.on('connect', () => {
+            updateStatus('✅ Connected! Testing authentication...', 'success');
+            addLog('✅ Socket.IO connected successfully');
+            
+            // Test 2: Authentication
+            addLog('🔧 Testing authentication with user ID 1');
+            socket.emit('authenticate', {
+                userId: 1,
+                username: 'test_user',
+                timestamp: Date.now()
+            });
+        });
+
+        socket.on('disconnect', () => {
+            updateStatus('❌ Disconnected from WebSocket server', 'error');
+            addLog('❌ Socket.IO disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            updateStatus('❌ Connection failed', 'error');
+            addLog('❌ Connection failed: ' + error.message);
+            addLog('Error details: ' + JSON.stringify({
+                message: error.message,
+                description: error.description,
+                context: error.context,
+                type: error.type
+            }));
+        });
+
+        socket.on('authenticated', (data) => {
+            updateStatus('✅ Authenticated! WebSocket is working perfectly!', 'success');
+            addLog('✅ Authentication successful: ' + JSON.stringify(data));
+            
+            // Test 3: Message
+            addLog('🔧 Testing message broadcast');
+            socket.emit('new_message', {
+                channelId: 1,
+                messageData: {
+                    content: 'Test message from home debug',
+                    userId: 1,
+                    username: 'test_user'
+                }
+            });
+        });
+
+        socket.on('authentication_failed', (data) => {
+            updateStatus('❌ Authentication failed', 'error');
+            addLog('❌ Authentication failed: ' + data.message);
+        });
+
+        socket.on('error', (data) => {
+            addLog('⚠️ Socket error: ' + data.message);
+        });
+
+        socket.on('message_received', (data) => {
+            addLog('📨 Message received: ' + JSON.stringify(data));
+        });
+
+        // Timeout test
+        setTimeout(() => {
+            if (!socket.connected) {
+                updateStatus('❌ Connection timeout - WebSocket server may not be running', 'error');
+                addLog('❌ Connection timeout after 15 seconds');
+                addLog('💡 Make sure you have run "npm run dev" in the websocket folder');
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

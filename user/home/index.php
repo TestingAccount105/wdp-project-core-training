@@ -1,5 +1,13 @@
 <?php
 session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /auth/login.php');
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'] ?? 'Guest';
 ?>
 <!DOCTYPE html>
@@ -14,6 +22,13 @@ $username = $_SESSION['username'] ?? 'Guest';
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
+    <script>
+        // Set global user data for WebSocket authentication
+        window.currentUser = {
+            id: <?php echo $user_id; ?>,
+            username: '<?php echo htmlspecialchars($username); ?>'
+        };
+    </script>
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <div class="sidebar">

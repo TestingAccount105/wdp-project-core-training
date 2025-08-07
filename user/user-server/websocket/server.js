@@ -12,10 +12,19 @@ const server = http.createServer(app);
 // Configure Socket.IO with CORS
 const io = socketIo(server, {
     cors: {
-        origin: ["http://localhost:8010", "http://127.0.0.1", "http://localhost:8010"],
+        origin: [
+            "http://localhost", 
+            "http://localhost:80", 
+            "http://localhost:8080",
+            "http://localhost:8010", 
+            "http://127.0.0.1",
+            "http://127.0.0.1:80",
+            "http://127.0.0.1:8080"
+        ],
         methods: ["GET", "POST"],
         credentials: true
-    }
+    },
+    allowEIO3: true
 });
 
 // Database configuration
@@ -67,28 +76,56 @@ const channelRooms = new Map();
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
     
-    const session = socket.request.session;
-    const userId = session.user_id;
+    let userId = null;
     
-    if (!userId) {
-        socket.disconnect();
-        return;
+    // Try to get user ID from session first
+    const session = socket.request.session;
+    if (session && session.user_id) {
+        userId = session.user_id;
+        console.log(`User authenticated via session: ${userId}`);
+        handleUserConnect(socket, userId);
+    } else {
+        console.log('User not authenticated via session, waiting for manual authentication...');
     }
     
-    // Store user connection
-    activeUsers.set(userId, {
-        socketId: socket.id,
-        userId: userId,
-        status: 'online',
-        lastSeen: new Date()
+    // Handle manual authentication (for clients that don't use sessions)
+    socket.on('authenticate', (data) => {
+        if (data.userId) {
+            userId = data.userId;
+            socket.userId = userId;
+            console.log(`User manually authenticated: ${userId}`);
+            handleUserConnect(socket, userId);
+            socket.emit('authenticated', { success: true, userId: userId });
+        } else {
+            console.log('Authentication failed: no userId provided');
+            socket.emit('authentication_failed', { message: 'No userId provided' });
+        }
     });
     
-    // Update user status in database
-    updateUserStatus(userId, 'online');
+    function handleUserConnect(socket, userId) {
+        socket.userId = userId;
+        
+        // Store user connection
+        activeUsers.set(userId, {
+            socketId: socket.id,
+            userId: userId,
+            status: 'online',
+            lastSeen: new Date()
+        });
+        
+        // Update user status in database
+        updateUserStatus(userId, 'online');
+    }
     
     // Handle joining server room
     socket.on('join_server', async (data) => {
+        if (!socket.userId) {
+            socket.emit('error', { message: 'Not authenticated' });
+            return;
+        }
+        
         const { serverId } = data;
+        const userId = socket.userId;
         
         // Verify user is member of server
         const isMember = await isServerMember(userId, serverId);
@@ -117,7 +154,10 @@ io.on('connection', (socket) => {
     
     // Handle leaving server room
     socket.on('leave_server', (data) => {
+        if (!socket.userId) return;
+        
         const { serverId } = data;
+        const userId = socket.userId;
         
         socket.leave(`server_${serverId}`);
         
@@ -140,7 +180,13 @@ io.on('connection', (socket) => {
     
     // Handle joining channel room
     socket.on('join_channel', async (data) => {
+        if (!socket.userId) {
+            socket.emit('error', { message: 'Not authenticated' });
+            return;
+        }
+        
         const { channelId } = data;
+        const userId = socket.userId;
         
         // Get channel info and verify access
         const channel = await getChannelInfo(channelId);
@@ -169,7 +215,10 @@ io.on('connection', (socket) => {
     
     // Handle leaving channel room
     socket.on('leave_channel', (data) => {
+        if (!socket.userId) return;
+        
         const { channelId } = data;
+        const userId = socket.userId;
         
         socket.leave(`channel_${channelId}`);
         
@@ -186,7 +235,10 @@ io.on('connection', (socket) => {
     
     // Handle new message
     socket.on('new_message', async (data) => {
+        if (!socket.userId) return;
+        
         const { channelId, messageData } = data;
+        const userId = socket.userId;
         
         // Verify user can access channel
         const channel = await getChannelInfo(channelId);
@@ -436,6 +488,9 @@ io.on('connection', (socket) => {
     socket.on('disconnect', async () => {
         console.log('User disconnected:', socket.id);
         
+        const userId = socket.userId;
+        if (!userId) return;
+        
         // Remove from active users
         activeUsers.delete(userId);
         
@@ -591,7 +646,7 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8010;
 server.listen(PORT, () => {
     console.log(`WebSocket server running on port ${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/health`);

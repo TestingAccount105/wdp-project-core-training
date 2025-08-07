@@ -1,0 +1,22 @@
+{
+  "name": "discord-socket-server",
+  "version": "1.0.0",
+  "description": "Socket.IO server for Discord-like real-time messaging",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5",
+    "mysql2": "^3.6.0",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["socket.io", "real-time", "chat", "discord"],
+  "author": "Your Name",
+  "license": "MIT"
+}

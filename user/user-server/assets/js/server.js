@@ -23,49 +23,146 @@ class ServerApp {
     }
 
     initializeSocket() {
-        // Initialize Socket.IO connection
-        this.socket = io({
-            transports: ['websocket', 'polling']
-        });
+        // Initialize Socket.IO connection with better error handling
+        try {
+            console.log('Initializing WebSocket connection to localhost:8010');
+            this.socket = io('http://localhost:8010', {
+                transports: ['websocket', 'polling'],
+                withCredentials: true,
+                timeout: 20000,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
+            });
 
-        this.socket.on('connect', () => {
-            console.log('Connected to server');
-            this.updateUserStatus('online');
-        });
+            this.socket.on('connect', () => {
+                console.log('Connected to WebSocket server');
+                this.updateUserStatus('online');
+                
+                // Authenticate user
+                if (window.currentUser) {
+                    console.log('Authenticating user:', window.currentUser);
+                    this.socket.emit('authenticate', {
+                        userId: window.currentUser.id,
+                        username: window.currentUser.username
+                    });
+                }
+            });
 
-        this.socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            this.updateUserStatus('offline');
-        });
+            this.socket.on('disconnect', () => {
+                console.log('Disconnected from WebSocket server');
+                this.updateUserStatus('offline');
+            });
 
-        // Server-related socket events
-        this.socket.on('server_updated', (data) => {
-            this.handleServerUpdate(data);
-        });
+            this.socket.on('connect_error', (error) => {
+                console.warn('WebSocket connection failed:', error.message);
+                console.log('Falling back to regular HTTP polling for messages');
+                this.fallbackToPolling();
+            });
 
-        this.socket.on('channel_created', (data) => {
-            this.handleChannelCreated(data);
-        });
+            this.socket.on('reconnect', (attemptNumber) => {
+                console.log(`Reconnected to WebSocket server after ${attemptNumber} attempts`);
+            });
 
-        this.socket.on('channel_updated', (data) => {
-            this.handleChannelUpdated(data);
-        });
+            this.socket.on('reconnect_error', (error) => {
+                console.warn('WebSocket reconnection failed:', error.message);
+            });
 
-        this.socket.on('channel_deleted', (data) => {
-            this.handleChannelDeleted(data);
-        });
+            // Authentication events
+            this.socket.on('authenticated', (data) => {
+                console.log('Successfully authenticated:', data);
+            });
 
-        this.socket.on('member_joined', (data) => {
-            this.handleMemberJoined(data);
-        });
+            this.socket.on('authentication_failed', (data) => {
+                console.error('Authentication failed:', data.message);
+            });
 
-        this.socket.on('member_left', (data) => {
-            this.handleMemberLeft(data);
-        });
+            // Message-related socket events
+            this.socket.on('message_received', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    console.log('Real-time message received:', data);
+                    this.addMessageToUI(data.message);
+                }
+            });
 
-        this.socket.on('member_updated', (data) => {
-            this.handleMemberUpdated(data);
-        });
+            this.socket.on('message_edited', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    this.updateMessageInUI(data.messageId, data.newContent, data.editedAt);
+                }
+            });
+
+            this.socket.on('message_deleted', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    this.removeMessageFromUI(data.messageId);
+                }
+            });
+
+            this.socket.on('reaction_added', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    this.addReactionToUI(data.messageId, data.emoji, data.userId);
+                }
+            });
+
+            this.socket.on('reaction_removed', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    this.removeReactionFromUI(data.messageId, data.emoji, data.userId);
+                }
+            });
+
+            this.socket.on('user_typing', (data) => {
+                if (data.channelId === this.currentChannel?.ID) {
+                    this.updateTypingIndicator(data.username, data.isTyping);
+                }
+            });
+
+            // Server-related socket events
+            this.socket.on('server_updated', (data) => {
+                this.handleServerUpdate(data);
+            });
+
+            this.socket.on('channel_created', (data) => {
+                this.handleChannelCreated(data);
+            });
+
+            this.socket.on('channel_updated', (data) => {
+                this.handleChannelUpdated(data);
+            });
+
+            this.socket.on('channel_deleted', (data) => {
+                this.handleChannelDeleted(data);
+            });
+
+            this.socket.on('member_joined', (data) => {
+                this.handleMemberJoined(data);
+            });
+
+            this.socket.on('member_left', (data) => {
+                this.handleMemberLeft(data);
+            });
+
+            this.socket.on('member_updated', (data) => {
+                this.handleMemberUpdated(data);
+            });
+
+        } catch (error) {
+            console.error('Failed to initialize WebSocket connection:', error);
+            this.fallbackToPolling();
+        }
+    }
+
+    fallbackToPolling() {
+        console.log('Using HTTP polling fallback for updates');
+        
+        // Set up periodic message refresh instead of real-time
+        if (this.messageRefreshInterval) {
+            clearInterval(this.messageRefreshInterval);
+        }
+        
+        this.messageRefreshInterval = setInterval(() => {
+            if (this.currentChannel) {
+                this.loadChannelMessages();
+            }
+        }, 3000); // Refresh every 3 seconds
     }
 
     bindEvents() {
@@ -1272,13 +1369,23 @@ class ServerApp {
         const container = $('#filePreviewContainer');
         const previews = $('#filePreviews');
         
-        container.removeClass('hidden');
+        // Show the container
+        container.removeClass('hidden').show();
         previews.empty();
 
+        // Create preview grid
+        const grid = $('<div class="file-preview-grid"></div>');
+        
         this.selectedFiles.forEach((file, index) => {
             const preview = this.createFilePreview(file, index);
-            previews.append(preview);
+            grid.append(preview);
         });
+        
+        previews.append(grid);
+        
+        // Add upload info
+        const info = $('<div class="file-upload-info">You can add more files or send your message</div>');
+        previews.append(info);
     }
 
     createFilePreview(file, index) {
@@ -1334,7 +1441,7 @@ class ServerApp {
         this.selectedFiles.splice(index, 1);
         
         if (this.selectedFiles.length === 0) {
-            $('#filePreviewContainer').addClass('hidden');
+            $('#filePreviewContainer').addClass('hidden').hide();
         } else {
             this.showFilePreview();
         }
@@ -1431,12 +1538,17 @@ class ServerApp {
                 
                 // Clear file selection
                 this.selectedFiles = [];
-                $('#filePreviewContainer').addClass('hidden');
+                $('#filePreviewContainer').addClass('hidden').hide();
                 
                 // Clear reply context if it exists
                 if (this.replyingTo) {
                     $('.reply-context').remove();
                     this.replyingTo = null;
+                }
+                
+                // Emit new message via socket for real-time updates
+                if (data.messageData) {
+                    this.emitNewMessage(data.messageData);
                 }
                 
                 this.loadChannelMessages(); // Reload messages to show the new one
@@ -1450,6 +1562,143 @@ class ServerApp {
     }
 
     // Socket event handlers
+    handleServerUpdate(data) {
+        // Refresh server data if it's the current server
+        if (this.currentServer && this.currentServer.ID === data.serverId) {
+            this.loadServerData(data.serverId);
+        }
+    }
+
+    handleChannelCreated(data) {
+        // Refresh channels if it's in the current server
+        if (this.currentServer && this.currentServer.ID === data.serverId) {
+            this.loadServerChannels(data.serverId);
+        }
+    }
+
+    handleChannelUpdated(data) {
+        // Update channel info if it's the current channel
+        if (this.currentChannel && this.currentChannel.ID === data.channelId) {
+            this.loadChannelMessages();
+        }
+    }
+
+    handleChannelDeleted(data) {
+        // If current channel was deleted, clear it
+        if (this.currentChannel && this.currentChannel.ID === data.channelId) {
+            this.currentChannel = null;
+            $('#messagesList').html('<div class="no-messages">Channel no longer exists</div>');
+        }
+        // Refresh channels list
+        if (this.currentServer) {
+            this.loadServerChannels(this.currentServer.ID);
+        }
+    }
+
+    handleMemberJoined(data) {
+        // Refresh members list if it's the current server
+        if (this.currentServer && this.currentServer.ID === data.serverId) {
+            this.loadServerMembers(data.serverId);
+        }
+    }
+
+    handleMemberLeft(data) {
+        // Refresh members list if it's the current server
+        if (this.currentServer && this.currentServer.ID === data.serverId) {
+            this.loadServerMembers(data.serverId);
+        }
+    }
+
+    handleMemberUpdated(data) {
+        // Refresh members list if it's the current server
+        if (this.currentServer && this.currentServer.ID === data.serverId) {
+            this.loadServerMembers(data.serverId);
+        }
+    }
+
+    // Real-time message handling
+    addMessageToUI(message) {
+        const messageElement = this.renderMessageContent(message);
+        $('#messagesList').append(`
+            <div class="message-group">
+                <div class="message-author">
+                    <img src="${message.ProfilePictureUrl || '/assets/images/default-avatar.png'}" class="author-avatar">
+                    <span class="author-name">${message.DisplayName || message.Username}</span>
+                    <span class="message-timestamp">${this.formatMessageTime(message.CreatedAt)}</span>
+                </div>
+                ${messageElement}
+            </div>
+        `);
+        this.scrollToBottom();
+    }
+
+    updateMessageInUI(messageId, newContent, editedAt) {
+        const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+        if (messageElement.length > 0) {
+            messageElement.find('.message-content').html(this.formatMessageContent(newContent) + 
+                '<span class="edited-indicator">(edited)</span>');
+        }
+    }
+
+    removeMessageFromUI(messageId) {
+        const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+        messageElement.closest('.message-group').fadeOut(300, function() {
+            $(this).remove();
+        });
+    }
+
+    addReactionToUI(messageId, emoji, userId) {
+        // Implementation for adding reactions in real-time
+        this.loadChannelMessages(); // For now, just refresh messages
+    }
+
+    removeReactionFromUI(messageId, emoji, userId) {
+        // Implementation for removing reactions in real-time
+        this.loadChannelMessages(); // For now, just refresh messages
+    }
+
+    updateTypingIndicator(username, isTyping) {
+        const indicator = $('#typingIndicator');
+        const text = $('#typingText');
+        
+        if (isTyping) {
+            text.text(`${username} is typing...`);
+            indicator.removeClass('hidden').show();
+        } else {
+            indicator.addClass('hidden').hide();
+        }
+    }
+
+    // Emit socket events for real-time communication
+    emitNewMessage(messageData) {
+        if (this.socket && this.socket.connected && this.currentChannel) {
+            console.log('Emitting new message via WebSocket:', messageData);
+            this.socket.emit('new_message', {
+                channelId: this.currentChannel.ID,
+                messageData: messageData
+            });
+        } else {
+            console.log('WebSocket not connected - message sent via HTTP only');
+        }
+    }
+
+    emitTypingStart() {
+        if (this.socket && this.socket.connected && this.currentChannel) {
+            this.socket.emit('typing_start', {
+                channelId: this.currentChannel.ID,
+                username: window.currentUser?.username
+            });
+        }
+    }
+
+    emitTypingStop() {
+        if (this.socket && this.socket.connected && this.currentChannel) {
+            this.socket.emit('typing_stop', {
+                channelId: this.currentChannel.ID,
+                username: window.currentUser?.username
+            });
+        }
+    }
     handleServerUpdate(data) {
         if (this.currentServer && this.currentServer.ID === data.serverId) {
             this.currentServer = { ...this.currentServer, ...data.updates };

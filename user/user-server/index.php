@@ -276,7 +276,6 @@ $username = $_SESSION['username'] ?? 'User';
     <?php include 'modals/confirmation-modal.php'; ?>
 
     <!-- Scripts -->
-    <script src="assets/js/socket-client.js"></script>
     <script src="assets/js/server.js"></script>
     <script src="assets/js/channels.js"></script>
     <script src="assets/js/voice.js"></script>
@@ -287,6 +286,9 @@ $username = $_SESSION['username'] ?? 'User';
             id: <?php echo $user_id; ?>,
             username: '<?php echo htmlspecialchars($username); ?>'
         };
+        
+        // Initialize the application
+        console.log('Initializing with user:', window.currentUser);
     </script>
 </body>
 </html>

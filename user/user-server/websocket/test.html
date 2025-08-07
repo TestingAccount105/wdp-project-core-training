@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+    
+    <script>
+        const socket = io('http://localhost:8010', {
+            transports: ['websocket', 'polling'],
+            withCredentials: true
+        });
+
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+
+        socket.on('connect', () => {
+            status.innerHTML = '✅ Connected to WebSocket server';
+            status.style.color = 'green';
+            
+            // Test authentication with dummy user
+            socket.emit('authenticate', {
+                userId: 1, // Test with user ID 1
+                timestamp: Date.now()
+            });
+        });
+
+        socket.on('disconnect', () => {
+            status.innerHTML = '❌ Disconnected from WebSocket server';
+            status.style.color = 'red';
+        });
+
+        socket.on('connect_error', (error) => {
+            status.innerHTML = '❌ Connection failed: ' + error.message;
+            status.style.color = 'red';
+        });
+
+        socket.on('authenticated', (data) => {
+            messages.innerHTML += '<div>✅ Authentication successful: ' + JSON.stringify(data) + '</div>';
+        });
+
+        socket.on('authentication_failed', (data) => {
+            messages.innerHTML += '<div>❌ Authentication failed: ' + data.message + '</div>';
+        });
+
+        socket.on('error', (data) => {
+            messages.innerHTML += '<div>⚠️ Error: ' + data.message + '</div>';
+        });
+    </script>
+</body>
+</html>
