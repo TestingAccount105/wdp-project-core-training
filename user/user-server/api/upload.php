@@ -9,6 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     send_response(['error' => 'Method not allowed'], 405);
 }
 
+// Handle multiple file uploads for messages
+if (isset($_POST['action']) && $_POST['action'] === 'uploadFiles') {
+    uploadMultipleFiles($user_id);
+    return;
+}
+
 $upload_type = $_POST['type'] ?? '';
 $allowed_types = ['avatar', 'banner', 'server_icon', 'server_banner', 'attachment'];
 
@@ -87,6 +93,136 @@ try {
 } catch (Exception $e) {
     error_log("Upload error: " . $e->getMessage());
     send_response(['error' => 'Upload failed'], 500);
+}
+
+function uploadMultipleFiles($user_id) {
+    // Check if files were uploaded
+    if (!isset($_FILES['files']) || empty($_FILES['files']['name'])) {
+        send_response(['error' => 'No files uploaded'], 400);
+        return;
+    }
+
+    $files = $_FILES['files'];
+    $uploadedFiles = [];
+    $uploadDir = '../uploads/attachments/';
+    
+    // Create upload directory if it doesn't exist
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    // Maximum file size (10MB)
+    $maxSize = 10 * 1024 * 1024;
+    
+    // Allowed file types
+    $allowedTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/mov',
+        'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mpeg',
+        'text/plain', 'application/pdf',
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    // Handle multiple files
+    $fileCount = is_array($files['name']) ? count($files['name']) : 1;
+    
+    for ($i = 0; $i < $fileCount; $i++) {
+        // Get file info
+        $fileName = is_array($files['name']) ? $files['name'][$i] : $files['name'];
+        $fileTmpName = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
+        $fileSize = is_array($files['size']) ? $files['size'][$i] : $files['size'];
+        $fileError = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+        $fileType = is_array($files['type']) ? $files['type'][$i] : $files['type'];
+
+        // Check for upload errors
+        if ($fileError !== UPLOAD_ERR_OK) {
+            send_response(['error' => "Upload error for file: $fileName"], 400);
+            return;
+        }
+
+        // Validate file size
+        if ($fileSize > $maxSize) {
+            send_response(['error' => "File $fileName is too large. Maximum size is 10MB."], 400);
+            return;
+        }
+
+        // Validate file type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $fileTmpName);
+        finfo_close($finfo);
+
+        if (!in_array($mimeType, $allowedTypes)) {
+            send_response(['error' => "File type not allowed for: $fileName"], 400);
+            return;
+        }
+
+        // Generate unique filename
+        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+        $safeFileName = sanitize_filename(pathinfo($fileName, PATHINFO_FILENAME));
+        $uniqueFileName = $safeFileName . '_' . time() . '_' . uniqid() . '.' . $fileExtension;
+        
+        $uploadPath = $uploadDir . $uniqueFileName;
+
+        // Move uploaded file
+        if (move_uploaded_file($fileTmpName, $uploadPath)) {
+            $fileUrl = '/user/user-server/uploads/attachments/' . $uniqueFileName;
+            
+            // Store file info in database
+            try {
+                global $mysqli;
+                
+                // Create table if it doesn't exist
+                $mysqli->query("
+                    CREATE TABLE IF NOT EXISTS UploadedFiles (
+                        ID INTEGER(10) PRIMARY KEY AUTO_INCREMENT,
+                        UserID INTEGER(10) NOT NULL,
+                        FileName VARCHAR(255) NOT NULL,
+                        FilePath VARCHAR(500) NOT NULL,
+                        FileSize INTEGER(10) NOT NULL,
+                        MimeType VARCHAR(100) NOT NULL,
+                        UploadedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (UserID) REFERENCES Users(ID) ON DELETE CASCADE
+                    )
+                ");
+                
+                $stmt = $mysqli->prepare("
+                    INSERT INTO UploadedFiles (UserID, FileName, FilePath, FileSize, MimeType) 
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param("issis", $user_id, $fileName, $fileUrl, $fileSize, $mimeType);
+                $stmt->execute();
+            } catch (Exception $e) {
+                error_log("Error storing file info: " . $e->getMessage());
+                // Continue even if database storage fails
+            }
+            
+            $uploadedFiles[] = [
+                'url' => $fileUrl,
+                'name' => $fileName,
+                'size' => $fileSize,
+                'type' => $mimeType
+            ];
+        } else {
+            send_response(['error' => "Failed to upload file: $fileName"], 500);
+            return;
+        }
+    }
+
+    send_response([
+        'success' => true,
+        'fileUrls' => array_column($uploadedFiles, 'url'),
+        'files' => $uploadedFiles
+    ]);
+}
+
+function sanitize_filename($filename) {
+    // Remove special characters and spaces
+    $filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filename);
+    // Remove multiple underscores
+    $filename = preg_replace('/_+/', '_', $filename);
+    // Trim underscores from start and end
+    return trim($filename, '_');
 }
 
 function processImage($file_path, $upload_type) {

@@ -9,6 +9,7 @@ class ServerApp {
         this.cropper = null;
         this.currentCropTarget = null;
         this.replyingTo = null;
+        this.selectedFiles = [];
         
         this.init();
     }
@@ -135,6 +136,15 @@ class ServerApp {
         // Send button handling
         $('#sendButton').on('click', () => {
             this.sendMessage();
+        });
+
+        // File upload handling
+        $('#attachmentBtn').on('click', () => {
+            $('#fileInput').click();
+        });
+
+        $('#fileInput').on('change', (e) => {
+            this.handleFileSelection(e.target.files);
         });
     }
 
@@ -926,13 +936,44 @@ class ServerApp {
             return `
                 <div class="message-attachment image-attachment">
                     <img src="${attachmentUrl}" alt="${fileName}" class="attached-image" 
-                         style="max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer;">
+                         style="max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer;"
+                         onclick="window.open('${attachmentUrl}', '_blank')">
                     <div class="attachment-info">
                         <span class="attachment-name">${fileName}</span>
                     </div>
                 </div>
             `;
-        } else {
+        } 
+        // Check if it's a video
+        else if (['mp4', 'webm', 'mov'].includes(fileExtension)) {
+            return `
+                <div class="message-attachment video-attachment">
+                    <video controls style="max-width: 400px; max-height: 300px; border-radius: 8px;">
+                        <source src="${attachmentUrl}" type="video/${fileExtension}">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="attachment-info">
+                        <span class="attachment-name">${fileName}</span>
+                    </div>
+                </div>
+            `;
+        }
+        // Check if it's audio
+        else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+            return `
+                <div class="message-attachment audio-attachment">
+                    <audio controls style="width: 100%; max-width: 300px;">
+                        <source src="${attachmentUrl}" type="audio/${fileExtension}">
+                        Your browser does not support the audio tag.
+                    </audio>
+                    <div class="attachment-info">
+                        <span class="attachment-name">${fileName}</span>
+                    </div>
+                </div>
+            `;
+        } 
+        // For other file types
+        else {
             return `
                 <div class="message-attachment file-attachment">
                     <div class="file-info">
@@ -1189,6 +1230,155 @@ class ServerApp {
         }
     }
 
+    handleFileSelection(files) {
+        if (!files || files.length === 0) return;
+
+        // Validate file sizes and types
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const allowedTypes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'video/mp4', 'video/webm', 'video/mov',
+            'audio/mp3', 'audio/wav', 'audio/ogg',
+            'text/plain', 'application/pdf',
+            'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        for (let file of files) {
+            // Check file size
+            if (file.size > maxSize) {
+                this.showToast(`File "${file.name}" is too large. Maximum size is 10MB.`, 'error');
+                continue;
+            }
+
+            // Check file type
+            if (!allowedTypes.includes(file.type)) {
+                this.showToast(`File type "${file.type}" is not supported.`, 'error');
+                continue;
+            }
+
+            // Add to selected files
+            this.selectedFiles.push(file);
+        }
+
+        if (this.selectedFiles.length > 0) {
+            this.showFilePreview();
+        }
+
+        // Reset file input
+        $('#fileInput').val('');
+    }
+
+    showFilePreview() {
+        const container = $('#filePreviewContainer');
+        const previews = $('#filePreviews');
+        
+        container.removeClass('hidden');
+        previews.empty();
+
+        this.selectedFiles.forEach((file, index) => {
+            const preview = this.createFilePreview(file, index);
+            previews.append(preview);
+        });
+    }
+
+    createFilePreview(file, index) {
+        const fileSize = this.formatFileSize(file.size);
+        const fileName = file.name;
+        const fileType = file.type;
+
+        let previewContent = '';
+        
+        // Create different previews based on file type
+        if (fileType.startsWith('image/')) {
+            const url = URL.createObjectURL(file);
+            previewContent = `
+                <div class="file-preview-thumbnail">
+                    <img src="${url}" alt="${fileName}" class="preview-image">
+                </div>
+            `;
+        } else if (fileType.startsWith('video/')) {
+            previewContent = `
+                <div class="file-preview-thumbnail">
+                    <i class="fas fa-video file-icon"></i>
+                </div>
+            `;
+        } else if (fileType.startsWith('audio/')) {
+            previewContent = `
+                <div class="file-preview-thumbnail">
+                    <i class="fas fa-music file-icon"></i>
+                </div>
+            `;
+        } else {
+            previewContent = `
+                <div class="file-preview-thumbnail">
+                    <i class="fas fa-file file-icon"></i>
+                </div>
+            `;
+        }
+
+        return $(`
+            <div class="file-preview-item" data-file-index="${index}">
+                ${previewContent}
+                <div class="file-preview-info">
+                    <div class="file-preview-name">${fileName}</div>
+                    <div class="file-preview-size">${fileSize}</div>
+                </div>
+                <button class="file-preview-remove" onclick="serverApp.removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `);
+    }
+
+    removeFile(index) {
+        this.selectedFiles.splice(index, 1);
+        
+        if (this.selectedFiles.length === 0) {
+            $('#filePreviewContainer').addClass('hidden');
+        } else {
+            this.showFilePreview();
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async uploadFiles() {
+        if (this.selectedFiles.length === 0) return null;
+
+        const formData = new FormData();
+        formData.append('action', 'uploadFiles');
+        
+        // Add all selected files
+        this.selectedFiles.forEach((file, index) => {
+            formData.append(`files[${index}]`, file);
+        });
+
+        try {
+            const response = await fetch('api/upload.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                return data.fileUrls; // Array of uploaded file URLs
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('File upload error:', error);
+            this.showToast('Failed to upload files', 'error');
+            return null;
+        }
+    }
+
     async sendMessage() {
         if (!this.currentChannel) {
             this.showToast('No channel selected', 'error');
@@ -1198,15 +1388,31 @@ class ServerApp {
         const messageInput = $('#messageInput');
         const content = messageInput.val().trim();
         
-        if (!content) {
+        // Allow sending if there's either content or files
+        if (!content && this.selectedFiles.length === 0) {
             return;
         }
 
         try {
+            let attachmentUrls = null;
+
+            // Upload files first if any are selected
+            if (this.selectedFiles.length > 0) {
+                attachmentUrls = await this.uploadFiles();
+                if (!attachmentUrls) {
+                    return; // Upload failed
+                }
+            }
+
             const formData = new FormData();
             formData.append('action', 'sendMessage');
             formData.append('channelId', this.currentChannel.ID);
-            formData.append('content', content);
+            formData.append('content', content || ''); // Allow empty content if there are attachments
+            
+            // Add attachment URLs if any
+            if (attachmentUrls && attachmentUrls.length > 0) {
+                formData.append('attachmentUrls', JSON.stringify(attachmentUrls));
+            }
             
             // Add reply information if replying
             if (this.replyingTo) {
@@ -1222,6 +1428,10 @@ class ServerApp {
 
             if (data.success) {
                 messageInput.val('');
+                
+                // Clear file selection
+                this.selectedFiles = [];
+                $('#filePreviewContainer').addClass('hidden');
                 
                 // Clear reply context if it exists
                 if (this.replyingTo) {

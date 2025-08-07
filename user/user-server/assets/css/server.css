@@ -931,7 +931,216 @@ body {
     min-width: 8px;
 }
 
-/* Delete Confirmation Modal */
+/* File Upload Styles */
+.file-upload-area {
+    position: relative;
+}
+
+.file-preview-container {
+    background: rgba(114, 137, 218, 0.1);
+    border: 2px dashed rgba(114, 137, 218, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.file-preview-container.active {
+    display: block;
+}
+
+.file-preview-container.drag-over {
+    background: rgba(114, 137, 218, 0.2);
+    border-color: rgba(114, 137, 218, 0.6);
+}
+
+.file-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.file-preview-item {
+    position: relative;
+    background: #2f3136;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #40444b;
+}
+
+.file-preview-item img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.file-preview-item .file-icon {
+    font-size: 32px;
+    color: #7289da;
+    margin-bottom: 5px;
+}
+
+.file-preview-item .file-name {
+    font-size: 11px;
+    color: #b9bbbe;
+    word-break: break-word;
+    line-height: 1.2;
+}
+
+.file-preview-item .file-size {
+    font-size: 10px;
+    color: #72767d;
+}
+
+.file-remove-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ed4245;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-remove-btn:hover {
+    background: #c73e41;
+}
+
+.file-upload-info {
+    font-size: 12px;
+    color: #72767d;
+    text-align: center;
+    margin-top: 5px;
+}
+
+/* Message Attachment Styles */
+.message-attachment {
+    margin: 8px 0;
+    max-width: 400px;
+}
+
+.message-attachment.image-attachment img {
+    border-radius: 8px;
+    max-width: 100%;
+    height: auto;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.message-attachment.image-attachment img:hover {
+    opacity: 0.8;
+}
+
+.message-attachment.video-attachment video,
+.message-attachment.audio-attachment audio {
+    border-radius: 8px;
+    background: #2f3136;
+}
+
+.message-attachment.file-attachment {
+    background: #2f3136;
+    border: 1px solid #40444b;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.message-attachment .file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.message-attachment .file-info i {
+    color: #7289da;
+    font-size: 16px;
+}
+
+.message-attachment .file-name {
+    color: #b9bbbe;
+    flex: 1;
+    font-size: 14px;
+}
+
+.message-attachment .download-btn {
+    color: #7289da;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #7289da;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.message-attachment .download-btn:hover {
+    background: #7289da;
+    color: white;
+}
+
+.attachment-info {
+    margin-top: 4px;
+}
+
+.attachment-name {
+    font-size: 12px;
+    color: #72767d;
+    display: block;
+}
+
+/* Drag and Drop Overlay */
+.drag-drop-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.drag-drop-overlay.active {
+    display: flex;
+}
+
+.drag-drop-content {
+    background: #36393f;
+    border: 2px dashed #7289da;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    color: #b9bbbe;
+}
+
+.drag-drop-content i {
+    font-size: 48px;
+    color: #7289da;
+    margin-bottom: 16px;
+}
+
+.drag-drop-content h3 {
+    margin: 0 0 8px 0;
+    color: white;
+    font-size: 20px;
+}
+
+.drag-drop-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #72767d;
+}
 .delete-modal-overlay {
     position: fixed;
     top: 0;

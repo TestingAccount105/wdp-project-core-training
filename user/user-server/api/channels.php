@@ -395,16 +395,18 @@ function sendMessage($user_id) {
     $content = trim($_POST['content'] ?? '');
     $reply_to = $_POST['replyTo'] ?? null;
     $message_type = sanitize_input($_POST['messageType'] ?? 'text');
-    $attachment_url = $_POST['attachmentUrl'] ?? null;
+    $attachment_urls = $_POST['attachmentUrls'] ?? null;
     
     if (empty($channel_id)) {
         send_response(['error' => 'Channel ID is required'], 400);
+        return;
     }
     
-    if (empty($content) && empty($attachment_url)) {
+    if (empty($content) && empty($attachment_urls)) {
         send_response(['error' => 'Message content or attachment is required'], 400);
+        return;
     }
-    
+
     try {
         // Get channel and verify access
         $stmt = $mysqli->prepare("
@@ -419,18 +421,32 @@ function sendMessage($user_id) {
         
         if (!$channel = $result->fetch_assoc()) {
             send_response(['error' => 'Channel not found'], 404);
+            return;
         }
         
         if (!is_server_member($user_id, $channel['ServerID'])) {
             send_response(['error' => 'Access denied'], 403);
+            return;
         }
         
         // Only allow text messages in text channels
         if ($channel['Type'] !== 'Text') {
             send_response(['error' => 'Cannot send messages in voice channels'], 400);
+            return;
         }
         
         $mysqli->begin_transaction();
+        
+        // Parse attachment URLs if provided
+        $attachment_url = null;
+        if (!empty($attachment_urls)) {
+            $urls = json_decode($attachment_urls, true);
+            if (is_array($urls) && !empty($urls)) {
+                // For now, use the first attachment URL
+                // In the future, you might want to support multiple attachments
+                $attachment_url = $urls[0];
+            }
+        }
         
         // Create message
         $stmt = $mysqli->prepare("
@@ -473,9 +489,7 @@ function sendMessage($user_id) {
         error_log("Error sending message: " . $e->getMessage());
         send_response(['error' => 'Failed to send message'], 500);
     }
-}
-
-function editMessage($user_id) {
+}function editMessage($user_id) {
     global $mysqli;
     
     $message_id = $_POST['messageId'] ?? '';

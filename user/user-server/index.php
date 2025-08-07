@@ -258,6 +258,15 @@ $username = $_SESSION['username'] ?? 'User';
         </div>
     </div>
 
+    <!-- Drag and Drop Overlay -->
+    <div class="drag-drop-overlay" id="dragDropOverlay">
+        <div class="drag-drop-content">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h3>Drop your files here</h3>
+            <p>You can upload images, videos, audio files, and documents</p>
+        </div>
+    </div>
+
     <!-- Modals -->
     <?php include 'modals/create-server-modal.php'; ?>
     <?php include 'modals/user-settings-modal.php'; ?>
