@@ -49,7 +49,7 @@
                     <label for="channelNameInput">CHANNEL NAME</label>
                     <div class="channel-name-input">
                         <span class="channel-prefix" id="channelPrefix">#</span>
-                        <input type="text" id="channelNameInput" placeholder="new-channel" maxlength="100" required>
+                        <input type="text" id="channelNameInput" name="name" placeholder="new-channel" maxlength="100" required>
                     </div>
                     <p class="form-description">Use lowercase letters, numbers, hyphens, and underscores</p>
                     <div class="form-error" id="channelNameError"></div>

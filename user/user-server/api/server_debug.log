@@ -221,3 +221,38 @@ Channel auto-increment: 103, engine: InnoDB
 Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
 Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
 Channel current max ID: 102
+
+=== Server Creation Debug - 2025-08-07 02:17:01 ===
+User ID: 275034588
+POST data: {"name":"TEST312","description":"ETTEW","category":"Gaming","isPublic":"on","action":"createServer"}
+=== Image Upload Debug ===
+Upload dir: server-icons
+File info: {"name":"img-5.jpg","full_path":"img-5.jpg","type":"image\/jpeg","tmp_name":"C:\\xampp\\tmp\\php7B2A.tmp","error":0,"size":197221}
+Upload path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-icons
+Generated filename: 6893f07dbe9dd_1754525821.jpg
+Full path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-icons/6893f07dbe9dd_1754525821.jpg
+SUCCESS: File uploaded to /uploads/server-icons/6893f07dbe9dd_1754525821.jpg
+Icon uploaded: /uploads/server-icons/6893f07dbe9dd_1754525821.jpg
+=== Image Upload Debug ===
+Upload dir: server-banners
+File info: {"name":"img-5.jpg","full_path":"img-5.jpg","type":"image\/jpeg","tmp_name":"C:\\xampp\\tmp\\php7B2B.tmp","error":0,"size":197221}
+Upload path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-banners
+Generated filename: 6893f07dbf452_1754525821.jpg
+Full path: C:\cpp\WDP\T078_WDPProject_Discord\user\user-server\api/../../../uploads/server-banners/6893f07dbf452_1754525821.jpg
+SUCCESS: File uploaded to /uploads/server-banners/6893f07dbf452_1754525821.jpg
+Banner uploaded: /uploads/server-banners/6893f07dbf452_1754525821.jpg
+=== Checking table: Server ===
+Server auto-increment: 1002, engine: InnoDB
+Server ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Server current max ID: 1001
+=== Checking table: UserServerMemberships ===
+UserServerMemberships auto-increment: 1001, engine: InnoDB
+UserServerMemberships ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+UserServerMemberships ID column (UserID): {"Field":"UserID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+UserServerMemberships current max ID: 1000
+=== Checking table: Channel ===
+Channel auto-increment: 107, engine: InnoDB
+Channel ID column (ID): {"Field":"ID","Type":"int(10)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"}
+Channel ID column (ServerID): {"Field":"ServerID","Type":"int(10)","Null":"YES","Key":"MUL","Default":null,"Extra":""}
+Channel current max ID: 106

@@ -358,6 +358,103 @@ class ServerApp {
         $('#messageInput').attr('placeholder', `Message #${this.currentChannel.Name}...`);
     }
 
+    async loadChannelMessages() {
+        if (!this.currentChannel) return;
+
+        try {
+            const response = await fetch(`/user/user-server/api/channels.php?action=getMessages&channelId=${this.currentChannel.ID}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderMessages(data.messages);
+            } else {
+                this.showToast('Error loading messages', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            this.showToast('Failed to load messages', 'error');
+        }
+    }
+
+    renderMessages(messages) {
+        const container = $('#messagesList');
+        container.empty();
+
+        if (messages.length === 0) {
+            container.append(`
+                <div class="no-messages">
+                    <div class="no-messages-icon">
+                        <i class="fas fa-hashtag"></i>
+                    </div>
+                    <h3>Welcome to #${this.currentChannel.Name}!</h3>
+                    <p>This is the start of the #${this.currentChannel.Name} channel.</p>
+                </div>
+            `);
+            return;
+        }
+
+        messages.forEach(message => {
+            const messageElement = this.createMessageElement(message);
+            container.append(messageElement);
+        });
+
+        // Scroll to bottom
+        container.scrollTop(container[0].scrollHeight);
+    }
+
+    createMessageElement(message) {
+        const timestamp = new Date(message.SentAt).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const displayName = message.DisplayName || message.Username;
+        const avatar = message.ProfilePictureUrl || '/assets/images/default-avatar.png';
+        
+        return $(`
+            <div class="message" data-message-id="${message.ID}">
+                <div class="message-avatar">
+                    <img src="${avatar}" alt="${displayName}">
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author">${displayName}</span>
+                        <span class="message-timestamp">${timestamp}</span>
+                        ${message.EditedAt ? '<span class="message-edited">(edited)</span>' : ''}
+                    </div>
+                    <div class="message-text">${this.formatMessageContent(message.Content)}</div>
+                    ${message.AttachmentURL ? `<div class="message-attachment">
+                        <img src="${message.AttachmentURL}" alt="Attachment" class="attachment-image">
+                    </div>` : ''}
+                    ${message.reactions && message.reactions.length > 0 ? this.renderReactions(message.reactions) : ''}
+                </div>
+            </div>
+        `);
+    }
+
+    formatMessageContent(content) {
+        // Basic formatting - can be expanded
+        return content
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>');
+    }
+
+    renderReactions(reactions) {
+        let reactionsHtml = '<div class="message-reactions">';
+        reactions.forEach(reaction => {
+            reactionsHtml += `
+                <div class="reaction" data-emoji="${reaction.emoji}">
+                    <span class="reaction-emoji">${reaction.emoji}</span>
+                    <span class="reaction-count">${reaction.count}</span>
+                </div>
+            `;
+        });
+        reactionsHtml += '</div>';
+        return reactionsHtml;
+    }
+
     showTextInterface() {
         $('#voiceInterface').addClass('hidden');
         $('#messageInputContainer').removeClass('hidden');
@@ -835,41 +932,66 @@ function closeCreateChannelModal() {
 }
 
 function createChannel() {
-    // Get form data
-    const channelName = document.getElementById('channelNameInput').value;
-    const channelType = document.querySelector('input[name="channelType"]:checked').value;
-    const channelDescription = document.getElementById('channelDescription').value;
+    // Get form elements with proper validation
+    const channelNameInput = document.getElementById('channelNameInput');
+    const channelTypeInput = document.querySelector('input[name="channelType"]:checked');
+    
+    // Validate elements exist
+    if (!channelNameInput) {
+        console.error('Channel name input not found');
+        serverApp.showToast('Channel name input not found', 'error');
+        return;
+    }
+    
+    if (!channelTypeInput) {
+        console.error('Channel type not selected');
+        serverApp.showToast('Please select a channel type', 'error');
+        return;
+    }
+    
+    if (!serverApp.currentServer) {
+        serverApp.showToast('No server selected', 'error');
+        return;
+    }
+    
+    // Get values
+    const channelName = channelNameInput.value.trim();
+    const channelType = channelTypeInput.value;
     
     if (!channelName) {
-        alert('Channel name is required');
+        serverApp.showToast('Channel name is required', 'error');
         return;
     }
     
     // Create FormData
     const formData = new FormData();
-    formData.append('action', 'create_channel');
+    formData.append('action', 'createChannel');
     formData.append('name', channelName);
     formData.append('type', channelType);
-    formData.append('description', channelDescription);
-    formData.append('serverId', currentServerId);
+    formData.append('serverId', serverApp.currentServer.ID);
     
     fetch('api/channels.php', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             closeCreateChannelModal();
-            // Refresh channel list
-            location.reload();
+            serverApp.loadServerChannels();
+            serverApp.showToast('Channel created successfully!', 'success');
         } else {
-            alert(data.message || 'Failed to create channel');
+            serverApp.showToast(data.error || 'Failed to create channel', 'error');
         }
     })
     .catch(error => {
         console.error('Error creating channel:', error);
-        alert('Failed to create channel');
+        serverApp.showToast('Failed to create channel', 'error');
     });
 }
 
