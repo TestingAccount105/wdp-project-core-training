@@ -529,6 +529,7 @@ function deleteMessage($user_id) {
     
     if (empty($message_id)) {
         send_response(['error' => 'Message ID is required'], 400);
+        return;
     }
     
     try {
@@ -546,6 +547,7 @@ function deleteMessage($user_id) {
         
         if (!$message = $result->fetch_assoc()) {
             send_response(['error' => 'Message not found'], 404);
+            return;
         }
         
         // Check if user can delete (owner of message or server admin)
@@ -553,17 +555,47 @@ function deleteMessage($user_id) {
         
         if (!$can_delete) {
             send_response(['error' => 'Access denied'], 403);
+            return;
         }
         
-        // Delete message
-        $stmt = $mysqli->prepare("DELETE FROM Message WHERE ID = ?");
-        $stmt->bind_param("i", $message_id);
-        $stmt->execute();
+        // Start transaction for safe deletion
+        $mysqli->begin_transaction();
         
-        send_response(['success' => true, 'message' => 'Message deleted successfully']);
+        try {
+            // Delete message reactions first
+            $stmt = $mysqli->prepare("DELETE FROM MessageReaction WHERE MessageID = ?");
+            $stmt->bind_param("i", $message_id);
+            $stmt->execute();
+            
+            // Delete change history
+            $stmt = $mysqli->prepare("DELETE FROM ChangeMessage WHERE MessageID = ?");
+            $stmt->bind_param("i", $message_id);
+            $stmt->execute();
+            
+            // Delete channel message relationship
+            $stmt = $mysqli->prepare("DELETE FROM ChannelMessage WHERE MessageID = ?");
+            $stmt->bind_param("i", $message_id);
+            $stmt->execute();
+            
+            // Delete the message itself
+            $stmt = $mysqli->prepare("DELETE FROM Message WHERE ID = ?");
+            $stmt->bind_param("i", $message_id);
+            $stmt->execute();
+            
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("Message could not be deleted");
+            }
+            
+            $mysqli->commit();
+            send_response(['success' => true, 'message' => 'Message deleted successfully']);
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            throw $e;
+        }
+        
     } catch (Exception $e) {
         error_log("Error deleting message: " . $e->getMessage());
-        send_response(['error' => 'Failed to delete message'], 500);
+        send_response(['error' => 'Failed to delete message: ' . $e->getMessage()], 500);
     }
 }
 

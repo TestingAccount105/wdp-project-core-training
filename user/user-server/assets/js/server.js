@@ -3,6 +3,7 @@ class ServerApp {
     constructor() {
         this.currentServer = null;
         this.currentChannel = null;
+        this.currentUser = null;
         this.userServers = [];
         this.socket = null;
         this.cropper = null;
@@ -428,6 +429,7 @@ class ServerApp {
     setupMessageActionListeners(container) {
         // Remove existing listeners to prevent duplicates
         container.off('click', '.message-action-btn');
+        container.off('click', '.clickable-reaction');
         
         // Add click listeners for message actions
         container.on('click', '.message-action-btn', (e) => {
@@ -448,13 +450,34 @@ class ServerApp {
                 case 'copy':
                     this.copyMessage(messageId);
                     break;
+                case 'edit':
+                    this.editMessage(messageId);
+                    break;
+                case 'delete':
+                    this.deleteMessage(messageId);
+                    break;
             }
+        });
+        
+        // Add click listeners for reactions
+        container.on('click', '.clickable-reaction', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const reactionBtn = $(e.currentTarget);
+            const emoji = reactionBtn.data('emoji');
+            const messageId = reactionBtn.closest('.message-item').data('message-id');
+            
+            this.toggleReaction(messageId, emoji);
         });
     }
 
     showReactionPicker(messageId, button) {
+        // Remove any existing reaction picker
+        $('.reaction-picker').remove();
+        
         // Simple reaction picker - can be expanded
-        const reactions = ['👍', '👎', '❤️', '😂', '😢', '😡'];
+        const reactions = ['👍', '👎', '❤️', '😂', '😢', '😡', '🎉', '🔥'];
         const picker = $(`
             <div class="reaction-picker">
                 ${reactions.map(emoji => `
@@ -464,10 +487,11 @@ class ServerApp {
         `);
         
         // Position picker near button
+        const buttonOffset = button.offset();
         picker.css({
-            position: 'absolute',
-            top: button.offset().top - 50,
-            left: button.offset().left,
+            position: 'fixed',
+            top: buttonOffset.top - 60,
+            left: buttonOffset.left,
             zIndex: 1000
         });
         
@@ -475,8 +499,9 @@ class ServerApp {
         
         // Handle reaction selection
         picker.on('click', '.reaction-option', (e) => {
+            e.stopPropagation();
             const emoji = $(e.target).data('emoji');
-            this.addReaction(messageId, emoji);
+            this.toggleReaction(messageId, emoji);
             picker.remove();
         });
         
@@ -547,6 +572,204 @@ class ServerApp {
             this.showToast('Failed to copy message', 'error');
         }
         document.body.removeChild(textArea);
+    }
+
+    async toggleReaction(messageId, emoji) {
+        try {
+            // Check if user already reacted with this emoji
+            const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+            const existingReaction = messageElement.find(`.reaction-item[data-emoji="${emoji}"]`);
+            const hasUserReaction = existingReaction.hasClass('user-reacted');
+            
+            const action = hasUserReaction ? 'removeReaction' : 'addReaction';
+            const formData = new FormData();
+            formData.append('action', action);
+            formData.append('messageId', messageId);
+            formData.append('emoji', emoji);
+
+            const response = await fetch('api/channels.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload messages to show the updated reactions
+                this.loadChannelMessages();
+            } else {
+                this.showToast(data.message || `Failed to ${action.replace('R', ' r')}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error toggling reaction:', error);
+            this.showToast('Failed to update reaction', 'error');
+        }
+    }
+
+    async editMessage(messageId) {
+        const messageElement = $(`.message-item[data-message-id="${messageId}"]`);
+        const messageContent = messageElement.find('.message-content').clone();
+        
+        // Remove edited indicator and attachments for editing
+        messageContent.find('.edited-indicator, .message-attachment').remove();
+        const currentText = messageContent.text().trim();
+        
+        // Create edit interface
+        const editForm = $(`
+            <div class="message-edit-form">
+                <textarea class="edit-textarea" rows="1">${currentText}</textarea>
+                <div class="edit-actions">
+                    <button class="save-edit-btn">Save</button>
+                    <button class="cancel-edit-btn">Cancel</button>
+                </div>
+            </div>
+        `);
+        
+        // Replace message content with edit form
+        messageElement.find('.message-content').hide();
+        messageElement.find('.message-actions').hide();
+        messageElement.append(editForm);
+        
+        // Focus and select text
+        const textarea = editForm.find('.edit-textarea');
+        textarea.focus().select();
+        
+        // Auto resize textarea
+        const autoResize = () => {
+            textarea.css('height', 'auto');
+            textarea.css('height', textarea[0].scrollHeight + 'px');
+        };
+        textarea.on('input', autoResize);
+        autoResize();
+        
+        // Handle save
+        editForm.find('.save-edit-btn').on('click', async () => {
+            const newContent = textarea.val().trim();
+            if (!newContent) {
+                this.showToast('Message cannot be empty', 'error');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'editMessage');
+                formData.append('messageId', messageId);
+                formData.append('content', newContent);
+
+                const response = await fetch('api/channels.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showToast('Message updated', 'success');
+                    this.loadChannelMessages();
+                } else {
+                    this.showToast(data.message || 'Failed to edit message', 'error');
+                }
+            } catch (error) {
+                console.error('Error editing message:', error);
+                this.showToast('Failed to edit message', 'error');
+            }
+        });
+        
+        // Handle cancel
+        editForm.find('.cancel-edit-btn').on('click', () => {
+            editForm.remove();
+            messageElement.find('.message-content, .message-actions').show();
+        });
+        
+        // Handle Enter to save, Escape to cancel
+        textarea.on('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                editForm.find('.save-edit-btn').click();
+            } else if (e.key === 'Escape') {
+                editForm.find('.cancel-edit-btn').click();
+            }
+        });
+    }
+
+    async deleteMessage(messageId) {
+        // Show custom confirmation modal instead of browser alert
+        this.showDeleteConfirmation(messageId);
+    }
+
+    showDeleteConfirmation(messageId) {
+        // Create custom modal
+        const modal = $(`
+            <div class="delete-modal-overlay">
+                <div class="delete-modal">
+                    <div class="delete-modal-header">
+                        <h3>Delete Message</h3>
+                    </div>
+                    <div class="delete-modal-content">
+                        <p>Are you sure you want to delete this message?</p>
+                        <p class="delete-warning">This cannot be undone.</p>
+                    </div>
+                    <div class="delete-modal-actions">
+                        <button class="cancel-delete-btn">Cancel</button>
+                        <button class="confirm-delete-btn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        // Add to body
+        $('body').append(modal);
+
+        // Handle cancel
+        modal.find('.cancel-delete-btn').on('click', () => {
+            modal.remove();
+        });
+
+        // Handle confirm delete
+        modal.find('.confirm-delete-btn').on('click', async () => {
+            modal.remove();
+            await this.performDeleteMessage(messageId);
+        });
+
+        // Close on overlay click
+        modal.on('click', (e) => {
+            if (e.target === modal[0]) {
+                modal.remove();
+            }
+        });
+
+        // Close on Escape key
+        $(document).on('keydown.deleteModal', (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                $(document).off('keydown.deleteModal');
+            }
+        });
+    }
+
+    async performDeleteMessage(messageId) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'deleteMessage');
+            formData.append('messageId', messageId);
+
+            const response = await fetch('api/channels.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showToast('Message deleted', 'success');
+                this.loadChannelMessages();
+            } else {
+                this.showToast(data.message || 'Failed to delete message', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            this.showToast('Failed to delete message', 'error');
+        }
     }
 
     async addReaction(messageId, emoji) {
@@ -645,9 +868,24 @@ class ServerApp {
         `;
     }
 
+    renderReplyContext(message) {
+        return `
+            <div class="reply-context-display">
+                <div class="reply-line"></div>
+                <div class="reply-info-display">
+                    <span class="reply-author-display">${message.ReplyUsername}</span>
+                    <span class="reply-content-display">${this.formatMessageContent(message.ReplyContent.substring(0, 100))}${message.ReplyContent.length > 100 ? '...' : ''}</span>
+                </div>
+            </div>
+        `;
+    }
+
     renderMessageContent(message) {
+        // Check if current user owns this message (convert both to numbers for comparison)
+        const isOwner = this.currentUser && parseInt(message.UserID) === parseInt(this.currentUser.ID);
         return `
             <div class="message-item" data-message-id="${message.ID}">
+                ${message.ReplyContent ? this.renderReplyContext(message) : ''}
                 <div class="message-content">
                     ${this.formatMessageContent(message.Content)}
                     ${message.AttachmentURL ? this.renderAttachment(message.AttachmentURL) : ''}
@@ -664,6 +902,14 @@ class ServerApp {
                     <button class="message-action-btn" data-action="copy" data-message-id="${message.ID}" title="Copy Message">
                         <i class="fas fa-copy"></i>
                     </button>
+                    ${isOwner ? `
+                        <button class="message-action-btn" data-action="edit" data-message-id="${message.ID}" title="Edit Message">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="message-action-btn" data-action="delete" data-message-id="${message.ID}" title="Delete Message">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -731,12 +977,17 @@ class ServerApp {
         
         return `
             <div class="message-reactions">
-                ${reactions.map(reaction => `
-                    <div class="reaction-item" data-emoji="${reaction.emoji}">
-                        <span class="reaction-emoji">${reaction.emoji}</span>
-                        <span class="reaction-count">${reaction.count}</span>
-                    </div>
-                `).join('')}
+                ${reactions.map(reaction => {
+                    const userReacted = this.currentUser && reaction.users.includes(this.currentUser.Username);
+                    return `
+                        <div class="reaction-item clickable-reaction ${userReacted ? 'user-reacted' : ''}" 
+                             data-emoji="${reaction.emoji}" 
+                             title="${reaction.users.join(', ')}">
+                            <span class="reaction-emoji">${reaction.emoji}</span>
+                            <span class="reaction-count">${reaction.count}</span>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
@@ -916,10 +1167,10 @@ class ServerApp {
             const data = await response.json();
             
             if (data.success) {
-                const user = data.user;
-                $('#currentUsername').text(user.Username);
-                $('#currentDiscriminator').text(`#${user.Discriminator}`);
-                $('#userAvatar').attr('src', user.ProfilePictureUrl || '/assets/images/default-avatar.png');
+                this.currentUser = data.user; // Store current user data
+                $('#currentUsername').text(data.user.Username);
+                $('#currentDiscriminator').text(`#${data.user.Discriminator}`);
+                $('#userAvatar').attr('src', data.user.ProfilePictureUrl || '/assets/images/default-avatar.png');
             }
         } catch (error) {
             console.error('Error loading user data:', error);

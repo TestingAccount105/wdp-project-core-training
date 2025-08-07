@@ -12,7 +12,7 @@ const server = http.createServer(app);
 // Configure Socket.IO with CORS
 const io = socketIo(server, {
     cors: {
-        origin: ["http://localhost", "http://127.0.0.1", "http://localhost:3001"],
+        origin: ["http://localhost:8010", "http://127.0.0.1", "http://localhost:8010"],
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -33,7 +33,7 @@ const pool = mysql.createPool(dbConfig);
 // Session store
 const sessionStore = new MySQLStore({
     host: dbConfig.host,
-    port: 3306,
+    port: 3307,
     user: dbConfig.user,
     password: dbConfig.password,
     database: dbConfig.database
